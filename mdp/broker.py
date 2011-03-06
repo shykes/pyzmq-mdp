@@ -43,7 +43,7 @@ from util import socketid2hex, split_address
 
 ###
 
-HB_INTERVAL = 1000  # in milliseconds
+HB_INTERVAL = 2000  # in milliseconds
 HB_LIVENESS = 5    # HBs to miss before connection counts as dead
 
 ###
@@ -70,7 +70,7 @@ class _WorkerRep(object):
         return
 
     def send_hb(self):
-        msg = [ self.id, b"MPDW01", chr(4) ]
+        msg = [ self.id, b"MDPW01", chr(4) ]
         self.stream.send_multipart(msg)
         return
 
@@ -228,25 +228,27 @@ class BrokerBase(object):
     def on_ready(self, ret_id, msg):
         """Process worker READY command.
         """
-        print "broker received ready"
-        print socketid2hex(ret_id)
-        pprint(msg)
-        print
+##         print "broker received ready"
+##         print socketid2hex(ret_id)
+##         pprint(msg)
+##         print
         self.register_worker(ret_id, msg[0])
         return
 
     def on_reply(self, ret_id, msg):
         """Process worker REPLY command.
         """
-        print "broker received REPLY"
-        print socketid2hex(ret_id)
-        pprint(msg)
-        print
+##         print "broker received REPLY"
+##         print socketid2hex(ret_id)
+##         pprint(msg)
         wrep = self._workers[ret_id]
         service = wrep.service
         client, msg = split_address(msg)
-        to_send = [ client, b'', service]
+        to_send = [ client, b'', b"MDPC01", service]
         to_send.extend(msg)
+##         print "brokers sends REPLY @%s" % socketid2hex(client)
+##         pprint(to_send)
+##         print
         self.client_stream.send_multipart(to_send)
         wq = self._services[service]
         wq.put(wrep.id)
@@ -271,18 +273,18 @@ class BrokerBase(object):
     def on_disconnect(self, ret_id, msg):
         """Process worker DISCONNECT command.
         """
-        print "broker received DISCONNECT"
-        print socketid2hex(ret_id)
-        pprint(msg)
-        print
+##         print "broker received DISCONNECT"
+##         print socketid2hex(ret_id)
+##         pprint(msg)
+##         print
         self.unregister_worker(ret_id)
         return
 
     def on_client(self, ret_id, msg):
-        print "broker received CLIENT request"
-        print socketid2hex(ret_id)
-        pprint(msg)
-        print
+##         print "broker received CLIENT request"
+##         print socketid2hex(ret_id)
+##         pprint(msg)
+##         print
         service = msg.pop(0)
         try:
             wq = self._services[service]
