@@ -10,8 +10,8 @@ from worker import MDPWorker
 
 class MyWorker(MDPWorker):
 
-    HB_INTERVAL = 2000
-    HB_LIVENESS = 5
+    HB_INTERVAL = 1000
+    HB_LIVENESS = 3
 
     count = 0
 
