@@ -28,12 +28,15 @@ __version__ = '0.0'
 
 
 import sys
+import time
 from exceptions import UserWarning
 from pprint import pprint
 
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
 from zmq.eventloop.ioloop import IOLoop, DelayedCallback, PeriodicCallback
+
+from util import split_address
 
 ###
 
@@ -63,8 +66,8 @@ class MDPWorker(object):
     _proto_version = b'MDPW01'
 
     # TODO: integrate that into API
-    HB_INTERVAL = 100  # in milliseconds
-    HB_LIVENESS = 5    # HBs to miss before connection counts as dead
+    HB_INTERVAL = 1000  # in milliseconds
+    HB_LIVENESS = 3    # HBs to miss before connection counts as dead
 
     def __init__(self, context, endpoint, service):
         """Initialize the MDPWorker.
@@ -94,24 +97,26 @@ class MDPWorker(object):
         self.stream.connect(self.endpoint)
         self.ticker = PeriodicCallback(self._tick, self.HB_INTERVAL)
         self._send_ready()
+        self.ticker.start()
         return
 
     def _send_ready(self):
         """Helper method to prepare and send the workers READY message.
         """
-        ready_msg = [ self._proto_version, chr(1), self.service ]
+        ready_msg = [ b'', self._proto_version, chr(1), self.service ]
         self.stream.send_multipart(ready_msg)
         self.curr_liveness = self.HB_LIVENESS
-        self.ticker.start()
         return
 
     def _tick(self):
         """Method called every HB_INTERVAL milliseconds.
         """
         self.curr_liveness -= 1
-        if self.curr_liveness > 0:
-            self.send_hb()
+##         print '%.3f tick - %d' % (time.time(), self.curr_liveness)
+        self.send_hb()
+        if self.curr_liveness >= 0:
             return
+        print '%.3f lost connection' % time.time()
         # ouch, connection seems to be dead
         self.shutdown()
         # try to recreate it
@@ -122,7 +127,7 @@ class MDPWorker(object):
     def send_hb(self):
         """Construct and send HB message to broker.
         """
-        msg = [ self._proto_version, chr(4) ]
+        msg = [ b'', self._proto_version, chr(4) ]
         self.stream.send_multipart(msg)
         return
 
@@ -149,8 +154,8 @@ class MDPWorker(object):
 
         msg can either be a byte-string or a list of byte-strings.
         """
-        if self.need_handshake:
-            raise ConnectionNotReadyError()
+##         if self.need_handshake:
+##             raise ConnectionNotReadyError()
         # prepare full message
         to_send = self.envelope
         self.envelope = None
@@ -166,29 +171,27 @@ class MDPWorker(object):
 
         msg is a list w/ the message parts
         """
-        # 1st part is protocol version
+        # 1st part is empty
+        msg.pop(0)
+        # 2nd part is protocol version
         # TODO: version check
-        # 2nd part is message type
-        msg_type = msg[1]
+        proto = msg.pop(0)
+        # 3nd part is message type
+        msg_type = msg.pop(0)
         # XXX: hardcoded message types!
-        if msg_type == chr(4): # heartbeat
-            self.need_handshake = False
-            self.curr_liveness = self.HB_LIVENESS
-        elif msg_type == chr(5): # disconnect
+        # any message resets the liveness counter
+        self.need_handshake = False
+        self.curr_liveness = self.HB_LIVENESS
+        if msg_type == '\x05': # disconnect
             print '    DISC'
             self.curr_liveness = 0 # reconnect will be triggered by hb timer
-        elif msg_type == chr(2): # request
+        elif msg_type == '\x02': # request
             # remaining parts are the user message
-            envelope = []
-            parts = msg[:]
-            while parts:
-                part = parts.pop(0)
-                envelope.append(part)
-                if not part:
-                    break
-            envelope[1] = chr(3) # REPLY
+            envelope, msg = split_address(msg)
+            envelope.append(b'')
+            envelope = [ b'', self._proto_version, '\x03'] + envelope # REPLY
             self.envelope = envelope
-            self.on_request(parts)
+            self.on_request(msg)
         else:
             # invalid message
             # ignored
