@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """Module containing client functionality for the MDP implementation.
+
+For the MDP specification see: http://rfc.zeromq.org/spec:7
 """
+
 __license__ = """
     This file is part of MDP.
 
