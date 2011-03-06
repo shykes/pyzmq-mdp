@@ -46,12 +46,15 @@ def split_address(msg):
     """Function to split return Id and message received by XREP.
 
     Returns 2-tuple with return Id and remaining message parts.
-    An empty frame after the Id is stripped.
+    Empty frames after the Id are stripped.
     """
-    ret_id = msg.pop(0)
-    if not msg[0]:
-        msg.pop(0)
-    return (ret_id, msg)
+    ret_ids = []
+    for i, p in enumerate(msg):
+        if p:
+            ret_ids.append(p)
+        else:
+            break
+    return (ret_ids, msg[i+1:])
 #
 ###
 
