@@ -10,7 +10,7 @@ from worker import MDPWorker
 
 class MyWorker(MDPWorker):
 
-    HB_INTERVAL = 1000
+    HB_INTERVAL = 2000
     HB_LIVENESS = 5
 
     count = 0
@@ -19,9 +19,6 @@ class MyWorker(MDPWorker):
         self.count = self.count + 1
         answer = ['REPLY'] + msg
         self.reply(answer)
-        if self.count > 2:
-            print 'HALT!'
-            IOLoop.instance().stop()
         return
 #
 ###
