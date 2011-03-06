@@ -43,7 +43,7 @@ from util import socketid2hex, split_address
 
 ###
 
-HB_INTERVAL = 2000  # in milliseconds
+HB_INTERVAL = 1000  # in milliseconds
 HB_LIVENESS = 5    # HBs to miss before connection counts as dead
 
 ###
@@ -70,7 +70,7 @@ class _WorkerRep(object):
         return
 
     def send_hb(self):
-        msg = [ self.id, b"MDPW01", chr(4) ]
+        msg = [ self.id, b'', b"MDPW01", chr(4) ]
         self.stream.send_multipart(msg)
         return
 
@@ -140,20 +140,24 @@ class BrokerBase(object):
     are wrapped in pyzmq streams to fit well into IOLoop.
     """
 
-    def __init__(self, context, master_ep, dtable, client_ep=None):
+    CLIENT_PROTO = b'MDPC01'
+    WORKER_PROTO = b'MDPW01'
+
+
+    def __init__(self, context, master_ep, client_ep=None):
         socket = context.socket(zmq.XREP)
         socket.bind(master_ep)
         self.master_stream = ZMQStream(socket)
-        self.dispatcher = Dispatcher(dtable)
-        self.master_stream.on_recv(self.dispatcher.on_message)
+        self.master_stream.on_recv(self.on_message)
         if client_ep:
             socket = context.socket(zmq.XREP)
             socket.bind(client_ep)
             self.client_stream = ZMQStream(socket)
-            self.client_stream.on_recv(self.dispatcher.on_message)
+            self.client_stream.on_recv(self.on_message)
         else:
             self.client_stream = self.master_stream
         self._workers = {}
+        # services contain the worker queue and the request queue
         self._services = {}
         self._worker_cmds = { '\x01': self.on_ready,
                               '\x03': self.on_reply,
@@ -173,11 +177,12 @@ class BrokerBase(object):
             return
         self._workers[wid] = _WorkerRep(wid, service, self.master_stream)
         if service in self._services:
-            self._services[service].put(wid)
+            wq, wr = self._services[service]
+            wq.put(wid)
         else:
             q = ServiceQueue()
             q.put(wid)
-            self._services[service] = q
+            self._services[service] = (q, [])
         return
 
     def unregister_worker(self, wid):
@@ -189,13 +194,20 @@ class BrokerBase(object):
         wrep.shutdown()
         service = wrep.service
         if service in self._services:
-            q = self._services[service]
-            q.remove(wid)
+            wq, wr = self._services[service]
+            wq.remove(wid)
         del self._workers[wid]
         return
 
+    def disconnect(self, wid):
+        """Send disconnect command to given id and unregister worker.
+        """
+        to_send = [ wid, self.WORKER_PROTO, b'\x05' ]
+        self.master_stream.send_multipart(to_send)
+        self.unregister_worker(wid)
+        return
+
     def shutdown(self):
-        self.dispatcher = None
         if self.client_stream == self.master_stream:
             self.client_stream = None
         self.master_stream.on_recv(None)
@@ -225,42 +237,36 @@ class BrokerBase(object):
                 self.unregister_worker(wrep.id)
         return
 
-    def on_ready(self, ret_id, msg):
+    def on_ready(self, rp, msg):
         """Process worker READY command.
         """
-##         print "broker received ready"
-##         print socketid2hex(ret_id)
-##         pprint(msg)
-##         print
+        ret_id = rp[0]
         self.register_worker(ret_id, msg[0])
         return
 
-    def on_reply(self, ret_id, msg):
+    def on_reply(self, rp, msg):
         """Process worker REPLY command.
         """
-##         print "broker received REPLY"
-##         print socketid2hex(ret_id)
-##         pprint(msg)
+        ret_id = rp[0]
         wrep = self._workers[ret_id]
         service = wrep.service
-        client, msg = split_address(msg)
-        to_send = [ client, b'', b"MDPC01", service]
+        # build client reply and send it
+        to_send, msg = split_address(msg)
+        to_send.extend([b'', self.CLIENT_PROTO, service])
         to_send.extend(msg)
-##         print "brokers sends REPLY @%s" % socketid2hex(client)
-##         pprint(to_send)
-##         print
         self.client_stream.send_multipart(to_send)
-        wq = self._services[service]
+        # make worker available again
+        wq, wr = self._services[service]
         wq.put(wrep.id)
+        if wr:
+            proto, rp, msg = wr.pop(0)
+            self.on_client(proto, rp, msg)
         return
 
-    def on_heartbeat(self, ret_id, msg):
+    def on_heartbeat(self, rp, msg):
         """Process worker HEARTBEAT command.
         """
-##         print "broker received HB"
-##         print socketid2hex(ret_id)
-##         pprint(msg)
-##         print
+        ret_id = rp[0]
         try:
             worker = self._workers[ret_id]
             if worker.is_alive():
@@ -270,32 +276,39 @@ class BrokerBase(object):
             pass
         return
 
-    def on_disconnect(self, ret_id, msg):
+    def on_disconnect(self, rp, msg):
         """Process worker DISCONNECT command.
         """
-##         print "broker received DISCONNECT"
-##         print socketid2hex(ret_id)
-##         pprint(msg)
-##         print
+        ret_id = rp[0]
         self.unregister_worker(ret_id)
         return
 
-    def on_client(self, ret_id, msg):
-##         print "broker received CLIENT request"
-##         print socketid2hex(ret_id)
-##         pprint(msg)
-##         print
+    def on_client(self, proto, rp, msg):
+        """Method called on client message.
+
+        proto is the protocol id sent.
+        ret_id is the socket id where the message came from.
+
+        Frame 0 is the requested service.
+        The remaining frames are the request to forward to the worker.
+
+        If the service is unknown to the broker or currently no worker available
+        for the service, the message is ignored.
+        """
         service = msg.pop(0)
         try:
-            wq = self._services[service]
+            wq, wr = self._services[service]
             wid = wq.get()
             if not wid:
                 # no worker ready
-                # ignore message
-                print 'broker has no worker for service "%s"' % service
+                # queue message
+                msg.insert(0, service)
+                wr.append((proto, rp, msg))
                 return
             wrep = self._workers[wid]
-            to_send = [ wrep.id, b"MDPW01", b'\x02', ret_id, b'']
+            to_send = [ wrep.id, b'', self.WORKER_PROTO, b'\x02']
+            to_send.extend(rp)
+            to_send.append(b'')
             to_send.extend(msg)
             self.master_stream.send_multipart(to_send)
         except KeyError:
@@ -304,26 +317,24 @@ class BrokerBase(object):
             print 'broker has no service "%s"' % service
         return
 
-    def on_worker(self, ret_id, msg):
+    def on_worker(self, proto, rp, msg):
+        """Method called on worker message.
+
+        proto is the protocol id sent.
+        ret_id is the socket id where the message came from.
+
+        Frame 0 is the command id.
+        The remaining frames depend on the command.
+
+        This method determines the command sent by the worker and
+        calls the appropriate method. If the command is unknown the
+        message is ignored.
+        """
         cmd = msg.pop(0)
         if cmd in self._worker_cmds:
             fnc = self._worker_cmds[cmd]
-            fnc(ret_id, msg)
+            fnc(rp, msg)
         # ignore unknown command
-        return
-#
-
-class Dispatcher(object):
-
-    """Class responsible for dispatching incomming messages to the appropriate handler.
-
-    Distinguishes between MDP clients and worker Messages.
-    """
-
-    def __init__(self, dtable):
-        """Initialize instance.
-        """
-        self.table = dtable
         return
 
     def on_message(self, msg):
@@ -334,10 +345,12 @@ class Dispatcher(object):
         rp, msg = split_address(msg)
         # dispatch on first frame after path
         t = msg.pop(0)
-        for pat, fnc in self.table.items():
-            if t.startswith(pat):
-                ret = fnc(rp, msg)
-                return ret
+        if t.startswith(b'MDPW'):
+            self.on_worker(t, rp, msg)
+        elif t.startswith(b'MDPC'):
+            self.on_client(t, rp, msg)
+        else:
+            print 'Broker unknown Protocol: "%s"' % t
         # ignores unknown messages
         return
 #
@@ -347,17 +360,7 @@ class MDPBroker(BrokerBase):
     """Basic implementation of the MDP broker.
     """
 
-    DISPATCH = {'MDPC':'on_client',
-                'MDPW':'on_worker'}
-
-    def __init__(self, context, master_ep, client_ep=None):
-        dtable = dict((k, getattr(self, v)) for k,v in self.DISPATCH.items())
-        super(MDPBroker, self).__init__(context, master_ep, dtable, client_ep)
-        return
-
-    def shutdown(self):
-        super(MDPBroker, self).shutdown()
-        return
+    pass
 #
 ###
 
