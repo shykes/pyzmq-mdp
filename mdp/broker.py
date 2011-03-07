@@ -114,7 +114,7 @@ class MDPBroker(object):
         """
         if wid in self._workers:
             return
-        self._workers[wid] = _WorkerRep(self.WORKER_PROTO, wid, service, self.main_stream)
+        self._workers[wid] = WorkerRep(self.WORKER_PROTO, wid, service, self.main_stream)
         if service in self._services:
             wq, wr = self._services[service]
             wq.put(wid)
@@ -388,7 +388,7 @@ class MDPBroker(object):
         return
 #
 
-class _WorkerRep(object):
+class WorkerRep(object):
 
     """Helper class to represent a worker in the broker.
 
