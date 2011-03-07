@@ -244,6 +244,7 @@ messages.</p>
 <dt id="mdp.broker.MDPBroker.on_disconnect">
 <tt class="descname">on_disconnect</tt><big>(</big><em>rp</em>, <em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker.on_disconnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker.on_disconnect" title="Permalink to this definition">¶</a></dt>
 <dd><p>Process worker DISCONNECT command.</p>
+<p>Unregisters the worker who sent this message.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -265,17 +266,21 @@ messages.</p>
 <dt id="mdp.broker.MDPBroker.on_client">
 <tt class="descname">on_client</tt><big>(</big><em>proto</em>, <em>rp</em>, <em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker.on_client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker.on_client" title="Permalink to this definition">¶</a></dt>
 <dd><p>Method called on client message.</p>
-<p>proto is the protocol id sent.
-ret_id is the socket id where the message came from.</p>
-<p>Frame 0 is the requested service.
+<p>Frame 0 of msg is the requested service.
 The remaining frames are the request to forward to the worker.</p>
-<p>If the service is unknown to the broker or currently no worker available
-for the service, the message is ignored.</p>
+<p>If the service is unknown to the broker the message is
+ignored.</p>
+<p>If currently no worker is available for a known service, the
+message is queued for later delivery.</p>
+<p>If a worker is available for the requested service, the
+message is repackaged and sent to the worker. The worker in
+question is removed from the pool of available workers.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>proto</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the protocol id sent</li>
 <li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
 <li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
 </ul>
@@ -292,18 +297,17 @@ for the service, the message is ignored.</p>
 <dt id="mdp.broker.MDPBroker.on_worker">
 <tt class="descname">on_worker</tt><big>(</big><em>proto</em>, <em>rp</em>, <em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker.on_worker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker.on_worker" title="Permalink to this definition">¶</a></dt>
 <dd><p>Method called on worker message.</p>
-<p>proto is the protocol id sent.
-ret_id is the socket id where the message came from.</p>
-<p>Frame 0 is the command id.
+<p>Frame 0 of msg is the command id.
 The remaining frames depend on the command.</p>
 <p>This method determines the command sent by the worker and
 calls the appropriate method. If the command is unknown the
-message is ignored.</p>
+message is ignored and a DISCONNECT is sent.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>proto</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the protocol id sent</li>
 <li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
 <li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
 </ul>
@@ -320,7 +324,19 @@ message is ignored.</p>
 <dt id="mdp.broker.MDPBroker.on_message">
 <tt class="descname">on_message</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker.on_message"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker.on_message" title="Permalink to this definition">¶</a></dt>
 <dd><p>Processes given message.</p>
-<p>msg is a list of strs representing the messages as received.</p>
+<p>Decides what kind of message it is &#8211; client or worker &#8211; and
+calls the appropriate method. If unknown, the message is
+ignored.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
