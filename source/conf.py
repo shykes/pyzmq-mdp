@@ -16,7 +16,7 @@ import sys, os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.append(os.path.abspath('.'))
+sys.path.append(os.path.abspath('..'))
 
 # -- General configuration -----------------------------------------------------
 
@@ -31,14 +31,14 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 # The encoding of source files.
-#source_encoding = 'utf-8'
+source_encoding = 'utf-8'
 
 # The master toctree document.
 master_doc = 'index'
 
 # General information about the project.
 project = u'ØMQ Majordomo Protocol Implementation'
-copyright = u'2011, Guido Goldstein, Pieter Hintjens'
+copyright = u'2011, Guido Goldstein'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
