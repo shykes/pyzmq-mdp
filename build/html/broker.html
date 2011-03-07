@@ -342,6 +342,56 @@ ignored.</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="mdp.broker.WorkerRep">
+<em class="property">class </em><tt class="descclassname">mdp.broker.</tt><tt class="descname">WorkerRep</tt><big>(</big><em>proto</em>, <em>wid</em>, <em>service</em>, <em>stream</em><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper class to represent a worker in the broker.</p>
+<p>Instances of this class are used to track the state of the attached worker
+and carry the timers for incomming and outgoing heartbeats.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>proto</strong> &#8211; the worker protocol id.</li>
+<li><strong>wid</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the worker id.</li>
+<li><strong>service</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; service this worker serves</li>
+<li><strong>stream</strong> (<em>ZMQStream</em>) &#8211; the ZMQStream used to send messages</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="mdp.broker.WorkerRep.send_hb">
+<tt class="descname">send_hb</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep.send_hb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called on every HB_INTERVAL.</p>
+<p>Decrements the current liveness by one.</p>
+<p>Sends heartbeat to worker.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.WorkerRep.on_heartbeat">
+<tt class="descname">on_heartbeat</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep.on_heartbeat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Called when a heartbeat message from the worker was received.</p>
+<p>Sets current liveness to HB_LIVENESS.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.WorkerRep.is_alive">
+<tt class="descname">is_alive</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep.is_alive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when the worker is considered alive.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.WorkerRep.shutdown">
+<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cleanup worker.</p>
+<p>Stops timer.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="mdp.broker.ServiceQueue">
 <em class="property">class </em><tt class="descclassname">mdp.broker.</tt><tt class="descname">ServiceQueue</tt><a class="reference internal" href="_modules/mdp/broker.html#ServiceQueue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.ServiceQueue" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class defining the Queue interface for workers for a service.</p>
