@@ -169,6 +169,24 @@ class MDPBroker(object):
         self.unregister_worker(wid)
         return
 
+    def client_response(self, rp, service, msg):
+        """Package and send reply to client.
+
+        :param rp:       return address stack
+        :type rp:        list of str
+        :param service:  name of service
+        :type service:   str
+        :param msg:      message parts
+        :type msg:       list of str
+
+        :rtype: None
+        """
+        to_send = rp[:]
+        to_send.extend([b'', self.CLIENT_PROTO, service])
+        to_send.extend(msg)
+        self.client_stream.send_multipart(to_send)
+        return
+
     def shutdown(self):
         """Shutdown broker.
 
@@ -239,17 +257,18 @@ class MDPBroker(object):
         ret_id = rp[0]
         wrep = self._workers[ret_id]
         service = wrep.service
-        # build client reply and send it
-        to_send, msg = split_address(msg)
-        to_send.extend([b'', self.CLIENT_PROTO, service])
-        to_send.extend(msg)
-        self.client_stream.send_multipart(to_send)
         # make worker available again
-        wq, wr = self._services[service]
-        wq.put(wrep.id)
-        if wr:
-            proto, rp, msg = wr.pop(0)
-            self.on_client(proto, rp, msg)
+        try:
+            wq, wr = self._services[service]
+            cp, msg = split_address(msg)
+            self.client_response(cp, service, msg)
+            wq.put(wrep.id)
+            if wr:
+                proto, rp, msg = wr.pop(0)
+                self.on_client(proto, rp, msg)
+        except KeyError:
+            # unknown service
+            self.disconnect(ret_id)
         return
 
     def on_heartbeat(self, rp, msg):
@@ -288,21 +307,43 @@ class MDPBroker(object):
         self.unregister_worker(wid)
         return
 
+    def on_mmi(self, rp, service, msg):
+        """Process MMI request.
+
+        For now only mmi.service is handled.
+        """
+        if service == b'mmi.service':
+            s = msg[0]
+            ret = b'404'
+            for wr in self._workers.values():
+                if s == wr.service:
+                    ret = b'200'
+                    break
+            self.client_response(rp, service, [ret])
+        else:
+            self.client_response(rp, service, [b'501'])
+        return
+
     def on_client(self, proto, rp, msg):
         """Method called on client message.
 
         Frame 0 of msg is the requested service.
         The remaining frames are the request to forward to the worker.
 
-        If the service is unknown to the broker the message is
+        .. note:: If the service is unknown to the broker the message is
         ignored.
 
-        If currently no worker is available for a known service, the
+        .. note:: If currently no worker is available for a known service, the
         message is queued for later delivery.
 
         If a worker is available for the requested service, the
         message is repackaged and sent to the worker. The worker in
         question is removed from the pool of available workers.
+
+        If the service name starts with `mmi.`, the message is passed to
+        the internal _MMI handler.
+
+        .. _MMI: http://rfc.zeromq.org/spec:8
 
         :param proto: the protocol id sent
         :type proto:  str
@@ -314,6 +355,9 @@ class MDPBroker(object):
         :rtype: None
         """
         service = msg.pop(0)
+        if service.startswith(b'mmi.'):
+            self.on_mmi(rp, service, msg)
+            return
         try:
             wq, wr = self._services[service]
             wid = wq.get()
