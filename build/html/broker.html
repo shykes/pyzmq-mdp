@@ -142,7 +142,7 @@ endpoint.</p>
 
 <dl class="method">
 <dt id="mdp.broker.MDPBroker.client_response">
-<tt class="descname">client_response</tt><big>(</big><em>rp</em>, <em>service</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.client_response" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">client_response</tt><big>(</big><em>rp</em>, <em>service</em>, <em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker.client_response"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker.client_response" title="Permalink to this definition">¶</a></dt>
 <dd><p>Package and send reply to client.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -286,9 +286,25 @@ messages.</p>
 
 <dl class="method">
 <dt id="mdp.broker.MDPBroker.on_mmi">
-<tt class="descname">on_mmi</tt><big>(</big><em>rp</em>, <em>service</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_mmi" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">on_mmi</tt><big>(</big><em>rp</em>, <em>service</em>, <em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker.on_mmi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker.on_mmi" title="Permalink to this definition">¶</a></dt>
 <dd><p>Process MMI request.</p>
 <p>For now only mmi.service is handled.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
+<li><strong>service</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the protocol id sent</li>
+<li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -299,19 +315,19 @@ messages.</p>
 The remaining frames are the request to forward to the worker.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">If the service is unknown to the broker the message is</p>
+<p class="last">If the service is unknown to the broker the message is
+ignored.</p>
 </div>
-<p>ignored.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
-<p class="last">If currently no worker is available for a known service, the</p>
+<p class="last">If currently no worker is available for a known service,
+the message is queued for later delivery.</p>
 </div>
-<p>message is queued for later delivery.</p>
 <p>If a worker is available for the requested service, the
 message is repackaged and sent to the worker. The worker in
 question is removed from the pool of available workers.</p>
 <p>If the service name starts with <cite>mmi.</cite>, the message is passed to
-the internal _MMI handler.</p>
+the internal <a class="reference external" href="http://rfc.zeromq.org/spec:8">MMI</a> handler.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -380,7 +396,7 @@ ignored.</p>
 
 <dl class="class">
 <dt id="mdp.broker.WorkerRep">
-<em class="property">class </em><tt class="descclassname">mdp.broker.</tt><tt class="descname">WorkerRep</tt><big>(</big><em>proto</em>, <em>wid</em>, <em>service</em>, <em>stream</em><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">mdp.broker.</tt><tt class="descname">WorkerRep</tt><big>(</big><em>proto</em>, <em>wid</em>, <em>service</em>, <em>stream</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#WorkerRep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.WorkerRep" title="Permalink to this definition">¶</a></dt>
 <dd><p>Helper class to represent a worker in the broker.</p>
 <p>Instances of this class are used to track the state of the attached worker
 and carry the timers for incomming and outgoing heartbeats.</p>
@@ -400,7 +416,7 @@ and carry the timers for incomming and outgoing heartbeats.</p>
 </table>
 <dl class="method">
 <dt id="mdp.broker.WorkerRep.send_hb">
-<tt class="descname">send_hb</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep.send_hb" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">send_hb</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#WorkerRep.send_hb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.WorkerRep.send_hb" title="Permalink to this definition">¶</a></dt>
 <dd><p>Called on every HB_INTERVAL.</p>
 <p>Decrements the current liveness by one.</p>
 <p>Sends heartbeat to worker.</p>
@@ -408,20 +424,20 @@ and carry the timers for incomming and outgoing heartbeats.</p>
 
 <dl class="method">
 <dt id="mdp.broker.WorkerRep.on_heartbeat">
-<tt class="descname">on_heartbeat</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep.on_heartbeat" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">on_heartbeat</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#WorkerRep.on_heartbeat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.WorkerRep.on_heartbeat" title="Permalink to this definition">¶</a></dt>
 <dd><p>Called when a heartbeat message from the worker was received.</p>
 <p>Sets current liveness to HB_LIVENESS.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="mdp.broker.WorkerRep.is_alive">
-<tt class="descname">is_alive</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep.is_alive" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">is_alive</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#WorkerRep.is_alive"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.WorkerRep.is_alive" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns True when the worker is considered alive.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="mdp.broker.WorkerRep.shutdown">
-<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.WorkerRep.shutdown" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#WorkerRep.shutdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.WorkerRep.shutdown" title="Permalink to this definition">¶</a></dt>
 <dd><p>Cleanup worker.</p>
 <p>Stops timer.</p>
 </dd></dl>

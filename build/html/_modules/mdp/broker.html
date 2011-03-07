@@ -53,16 +53,16 @@
 <span class="s">    This file is part of MDP.</span>
 
 <span class="s">    MDP is free software: you can redistribute it and/or modify</span>
-<span class="s">    it under the terms of the GNU Affero General Public License as published by</span>
+<span class="s">    it under the terms of the GNU General Public License as published by</span>
 <span class="s">    the Free Software Foundation, either version 3 of the License, or</span>
 <span class="s">    (at your option) any later version.</span>
 
 <span class="s">    MDP is distributed in the hope that it will be useful,</span>
 <span class="s">    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
 <span class="s">    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
-<span class="s">    GNU Affero General Public License for more details.</span>
+<span class="s">    GNU General Public License for more details.</span>
 
-<span class="s">    You should have received a copy of the GNU Affero General Public License</span>
+<span class="s">    You should have received a copy of the GNU General Public License</span>
 <span class="s">    along with MDP.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
 <span class="s">&quot;&quot;&quot;</span>
 
@@ -162,7 +162,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">wid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">:</span>
             <span class="k">return</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">[</span><span class="n">wid</span><span class="p">]</span> <span class="o">=</span> <span class="n">_WorkerRep</span><span class="p">(</span><span class="n">wid</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_stream</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">[</span><span class="n">wid</span><span class="p">]</span> <span class="o">=</span> <span class="n">WorkerRep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">WORKER_PROTO</span><span class="p">,</span> <span class="n">wid</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">main_stream</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">service</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_services</span><span class="p">:</span>
             <span class="n">wq</span><span class="p">,</span> <span class="n">wr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_services</span><span class="p">[</span><span class="n">service</span><span class="p">]</span>
             <span class="n">wq</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">wid</span><span class="p">)</span>
@@ -215,6 +215,24 @@
         <span class="n">to_send</span> <span class="o">=</span> <span class="p">[</span> <span class="n">wid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">WORKER_PROTO</span><span class="p">,</span> <span class="n">b</span><span class="s">&#39;</span><span class="se">\x05</span><span class="s">&#39;</span> <span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">main_stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">to_send</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">unregister_worker</span><span class="p">(</span><span class="n">wid</span><span class="p">)</span>
+        <span class="k">return</span>
+</div>
+<div class="viewcode-block" id="MDPBroker.client_response"><a class="viewcode-back" href="../../broker.html#mdp.broker.MDPBroker.client_response">[docs]</a>    <span class="k">def</span> <span class="nf">client_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Package and send reply to client.</span>
+
+<span class="sd">        :param rp:       return address stack</span>
+<span class="sd">        :type rp:        list of str</span>
+<span class="sd">        :param service:  name of service</span>
+<span class="sd">        :type service:   str</span>
+<span class="sd">        :param msg:      message parts</span>
+<span class="sd">        :type msg:       list of str</span>
+
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">to_send</span> <span class="o">=</span> <span class="n">rp</span><span class="p">[:]</span>
+        <span class="n">to_send</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">CLIENT_PROTO</span><span class="p">,</span> <span class="n">service</span><span class="p">])</span>
+        <span class="n">to_send</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client_stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">to_send</span><span class="p">)</span>
         <span class="k">return</span>
 </div>
 <div class="viewcode-block" id="MDPBroker.shutdown"><a class="viewcode-back" href="../../broker.html#mdp.broker.MDPBroker.shutdown">[docs]</a>    <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -287,17 +305,18 @@
         <span class="n">ret_id</span> <span class="o">=</span> <span class="n">rp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">wrep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="p">[</span><span class="n">ret_id</span><span class="p">]</span>
         <span class="n">service</span> <span class="o">=</span> <span class="n">wrep</span><span class="o">.</span><span class="n">service</span>
-        <span class="c"># build client reply and send it</span>
-        <span class="n">to_send</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">split_address</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-        <span class="n">to_send</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">CLIENT_PROTO</span><span class="p">,</span> <span class="n">service</span><span class="p">])</span>
-        <span class="n">to_send</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">client_stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">to_send</span><span class="p">)</span>
         <span class="c"># make worker available again</span>
-        <span class="n">wq</span><span class="p">,</span> <span class="n">wr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_services</span><span class="p">[</span><span class="n">service</span><span class="p">]</span>
-        <span class="n">wq</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">wrep</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">wr</span><span class="p">:</span>
-            <span class="n">proto</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">wr</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">on_client</span><span class="p">(</span><span class="n">proto</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">wq</span><span class="p">,</span> <span class="n">wr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_services</span><span class="p">[</span><span class="n">service</span><span class="p">]</span>
+            <span class="n">cp</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">split_address</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client_response</span><span class="p">(</span><span class="n">cp</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+            <span class="n">wq</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">wrep</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">wr</span><span class="p">:</span>
+                <span class="n">proto</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">wr</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">on_client</span><span class="p">(</span><span class="n">proto</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="c"># unknown service</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">disconnect</span><span class="p">(</span><span class="n">ret_id</span><span class="p">)</span>
         <span class="k">return</span>
 </div>
 <div class="viewcode-block" id="MDPBroker.on_heartbeat"><a class="viewcode-back" href="../../broker.html#mdp.broker.MDPBroker.on_heartbeat">[docs]</a>    <span class="k">def</span> <span class="nf">on_heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
@@ -323,6 +342,8 @@
 <div class="viewcode-block" id="MDPBroker.on_disconnect"><a class="viewcode-back" href="../../broker.html#mdp.broker.MDPBroker.on_disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">on_disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Process worker DISCONNECT command.</span>
 
+<span class="sd">        Unregisters the worker who sent this message.</span>
+
 <span class="sd">        :param rp:  return address stack</span>
 <span class="sd">        :type rp:   list of str</span>
 <span class="sd">        :param msg: message parts</span>
@@ -330,30 +351,74 @@
 
 <span class="sd">        :rtype: None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">ret_id</span> <span class="o">=</span> <span class="n">rp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">unregister_worker</span><span class="p">(</span><span class="n">ret_id</span><span class="p">)</span>
+        <span class="n">wid</span> <span class="o">=</span> <span class="n">rp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unregister_worker</span><span class="p">(</span><span class="n">wid</span><span class="p">)</span>
+        <span class="k">return</span>
+</div>
+<div class="viewcode-block" id="MDPBroker.on_mmi"><a class="viewcode-back" href="../../broker.html#mdp.broker.MDPBroker.on_mmi">[docs]</a>    <span class="k">def</span> <span class="nf">on_mmi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Process MMI request.</span>
+
+<span class="sd">        For now only mmi.service is handled.</span>
+
+<span class="sd">        :param rp:      return address stack</span>
+<span class="sd">        :type rp:       list of str</span>
+<span class="sd">        :param service: the protocol id sent</span>
+<span class="sd">        :type service:  str</span>
+<span class="sd">        :param msg:     message parts</span>
+<span class="sd">        :type msg:      list of str</span>
+
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">service</span> <span class="o">==</span> <span class="n">b</span><span class="s">&#39;mmi.service&#39;</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">msg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">b</span><span class="s">&#39;404&#39;</span>
+            <span class="k">for</span> <span class="n">wr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_workers</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">wr</span><span class="o">.</span><span class="n">service</span><span class="p">:</span>
+                    <span class="n">ret</span> <span class="o">=</span> <span class="n">b</span><span class="s">&#39;200&#39;</span>
+                    <span class="k">break</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client_response</span><span class="p">(</span><span class="n">rp</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="p">[</span><span class="n">ret</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client_response</span><span class="p">(</span><span class="n">rp</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="p">[</span><span class="n">b</span><span class="s">&#39;501&#39;</span><span class="p">])</span>
         <span class="k">return</span>
 </div>
 <div class="viewcode-block" id="MDPBroker.on_client"><a class="viewcode-back" href="../../broker.html#mdp.broker.MDPBroker.on_client">[docs]</a>    <span class="k">def</span> <span class="nf">on_client</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proto</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Method called on client message.</span>
 
-<span class="sd">        proto is the protocol id sent.</span>
-<span class="sd">        ret_id is the socket id where the message came from.</span>
-
-<span class="sd">        Frame 0 is the requested service.</span>
+<span class="sd">        Frame 0 of msg is the requested service.</span>
 <span class="sd">        The remaining frames are the request to forward to the worker.</span>
 
-<span class="sd">        If the service is unknown to the broker or currently no worker available</span>
-<span class="sd">        for the service, the message is ignored.</span>
+<span class="sd">        .. note::</span>
 
-<span class="sd">        :param rp:  return address stack</span>
-<span class="sd">        :type rp:   list of str</span>
-<span class="sd">        :param msg: message parts</span>
-<span class="sd">        :type msg:  list of str</span>
+<span class="sd">           If the service is unknown to the broker the message is</span>
+<span class="sd">           ignored.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           If currently no worker is available for a known service,</span>
+<span class="sd">           the message is queued for later delivery.</span>
+
+<span class="sd">        If a worker is available for the requested service, the</span>
+<span class="sd">        message is repackaged and sent to the worker. The worker in</span>
+<span class="sd">        question is removed from the pool of available workers.</span>
+
+<span class="sd">        If the service name starts with `mmi.`, the message is passed to</span>
+<span class="sd">        the internal MMI_ handler.</span>
+
+<span class="sd">        .. _MMI: http://rfc.zeromq.org/spec:8</span>
+
+<span class="sd">        :param proto: the protocol id sent</span>
+<span class="sd">        :type proto:  str</span>
+<span class="sd">        :param rp:    return address stack</span>
+<span class="sd">        :type rp:     list of str</span>
+<span class="sd">        :param msg:   message parts</span>
+<span class="sd">        :type msg:    list of str</span>
 
 <span class="sd">        :rtype: None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">service</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">service</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;mmi.&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_mmi</span><span class="p">(</span><span class="n">rp</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+            <span class="k">return</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">wq</span><span class="p">,</span> <span class="n">wr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_services</span><span class="p">[</span><span class="n">service</span><span class="p">]</span>
             <span class="n">wid</span> <span class="o">=</span> <span class="n">wq</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
@@ -378,16 +443,15 @@
 <div class="viewcode-block" id="MDPBroker.on_worker"><a class="viewcode-back" href="../../broker.html#mdp.broker.MDPBroker.on_worker">[docs]</a>    <span class="k">def</span> <span class="nf">on_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proto</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Method called on worker message.</span>
 
-<span class="sd">        proto is the protocol id sent.</span>
-<span class="sd">        ret_id is the socket id where the message came from.</span>
-
-<span class="sd">        Frame 0 is the command id.</span>
+<span class="sd">        Frame 0 of msg is the command id.</span>
 <span class="sd">        The remaining frames depend on the command.</span>
 
 <span class="sd">        This method determines the command sent by the worker and</span>
 <span class="sd">        calls the appropriate method. If the command is unknown the</span>
-<span class="sd">        message is ignored.</span>
+<span class="sd">        message is ignored and a DISCONNECT is sent.</span>
 
+<span class="sd">        :param proto: the protocol id sent</span>
+<span class="sd">        :type proto:  str</span>
 <span class="sd">        :param rp:  return address stack</span>
 <span class="sd">        :type rp:   list of str</span>
 <span class="sd">        :param msg: message parts</span>
@@ -399,13 +463,23 @@
         <span class="k">if</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_worker_cmds</span><span class="p">:</span>
             <span class="n">fnc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_worker_cmds</span><span class="p">[</span><span class="n">cmd</span><span class="p">]</span>
             <span class="n">fnc</span><span class="p">(</span><span class="n">rp</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
-        <span class="c"># ignore unknown command</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># ignore unknown command</span>
+            <span class="c"># DISCONNECT worker</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">disconnect</span><span class="p">(</span><span class="n">rp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="k">return</span>
 </div>
 <div class="viewcode-block" id="MDPBroker.on_message"><a class="viewcode-back" href="../../broker.html#mdp.broker.MDPBroker.on_message">[docs]</a>    <span class="k">def</span> <span class="nf">on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Processes given message.</span>
 
-<span class="sd">        msg is a list of strs representing the messages as received.</span>
+<span class="sd">        Decides what kind of message it is -- client or worker -- and</span>
+<span class="sd">        calls the appropriate method. If unknown, the message is</span>
+<span class="sd">        ignored.</span>
+
+<span class="sd">        :param msg: message parts</span>
+<span class="sd">        :type msg:  list of str</span>
+
+<span class="sd">        :rtype: None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">split_address</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="c"># dispatch on first frame after path</span>
@@ -416,58 +490,73 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">on_client</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">rp</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">print</span> <span class="s">&#39;Broker unknown Protocol: &quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="n">t</span>
-        <span class="c"># ignores unknown messages</span>
         <span class="k">return</span>
 <span class="c">#</span>
 </div></div>
-<span class="k">class</span> <span class="nc">_WorkerRep</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="WorkerRep"><a class="viewcode-back" href="../../broker.html#mdp.broker.WorkerRep">[docs]</a><span class="k">class</span> <span class="nc">WorkerRep</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="sd">&quot;&quot;&quot;Helper class to represent a worker in the broker.</span>
 
 <span class="sd">    Instances of this class are used to track the state of the attached worker</span>
 <span class="sd">    and carry the timers for incomming and outgoing heartbeats.</span>
+
+<span class="sd">    :param proto:    the worker protocol id.</span>
+<span class="sd">    :type wid:       str</span>
+<span class="sd">    :param wid:      the worker id.</span>
+<span class="sd">    :type wid:       str</span>
+<span class="sd">    :param service:  service this worker serves</span>
+<span class="sd">    :type service:   str</span>
+<span class="sd">    :param stream:   the ZMQStream used to send messages</span>
+<span class="sd">    :type stream:    ZMQStream</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wid</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">stream</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proto</span><span class="p">,</span> <span class="n">wid</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">stream</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proto</span> <span class="o">=</span> <span class="n">proto</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">wid</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">service</span> <span class="o">=</span> <span class="n">service</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">=</span> <span class="n">HB_LIVENESS</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="n">stream</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_hb</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hb_in_timer</span> <span class="o">=</span> <span class="n">PeriodicCallback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_tick</span><span class="p">,</span> <span class="n">HB_INTERVAL</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hb_in_timer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hb_out_timer</span> <span class="o">=</span> <span class="n">PeriodicCallback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">send_hb</span><span class="p">,</span> <span class="n">HB_INTERVAL</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hb_out_timer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
         <span class="k">return</span>
 
-    <span class="k">def</span> <span class="nf">on_tick</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">-=</span> <span class="mi">1</span>
-        <span class="k">return</span>
+<div class="viewcode-block" id="WorkerRep.send_hb"><a class="viewcode-back" href="../../broker.html#mdp.broker.WorkerRep.send_hb">[docs]</a>    <span class="k">def</span> <span class="nf">send_hb</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Called on every HB_INTERVAL.</span>
 
-    <span class="k">def</span> <span class="nf">send_hb</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">msg</span> <span class="o">=</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">b</span><span class="s">&quot;MDPW01&quot;</span><span class="p">,</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="p">]</span>
+<span class="sd">        Decrements the current liveness by one.</span>
+
+<span class="sd">        Sends heartbeat to worker.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">proto</span><span class="p">,</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="k">return</span>
+</div>
+<div class="viewcode-block" id="WorkerRep.on_heartbeat"><a class="viewcode-back" href="../../broker.html#mdp.broker.WorkerRep.on_heartbeat">[docs]</a>    <span class="k">def</span> <span class="nf">on_heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Called when a heartbeat message from the worker was received.</span>
 
-    <span class="k">def</span> <span class="nf">on_heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<span class="sd">        Sets current liveness to HB_LIVENESS.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">=</span> <span class="n">HB_LIVENESS</span>
-        <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">last_hb</span> <span class="o">=</span> <span class="n">t</span>
         <span class="k">return</span>
-
-    <span class="k">def</span> <span class="nf">is_alive</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</div>
+<div class="viewcode-block" id="WorkerRep.is_alive"><a class="viewcode-back" href="../../broker.html#mdp.broker.WorkerRep.is_alive">[docs]</a>    <span class="k">def</span> <span class="nf">is_alive</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns True when the worker is considered alive.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">&gt;</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="WorkerRep.shutdown"><a class="viewcode-back" href="../../broker.html#mdp.broker.WorkerRep.shutdown">[docs]</a>    <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Cleanup worker.</span>
 
-    <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hb_in_timer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+<span class="sd">        Stops timer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hb_out_timer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">hb_in_timer</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hb_out_timer</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="k">return</span>
 <span class="c">#</span>
-
+</div></div>
 <div class="viewcode-block" id="ServiceQueue"><a class="viewcode-back" href="../../broker.html#mdp.broker.ServiceQueue">[docs]</a><span class="k">class</span> <span class="nc">ServiceQueue</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="sd">&quot;&quot;&quot;Class defining the Queue interface for workers for a service.</span>
