@@ -1,0 +1,394 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>MDP broker module &mdash; ØMQ Majordomo Protocol Implementation v0.1 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="ØMQ Majordomo Protocol Implementation v0.1 documentation" href="index.html" />
+    <link rel="next" title="MDP util module" href="util.html" />
+    <link rel="prev" title="MDP worker module" href="worker.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="util.html" title="MDP util module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="worker.html" title="MDP worker module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">ØMQ Majordomo Protocol Implementation v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-mdp.broker">
+<span id="mdp-broker-module"></span><h1>MDP broker module<a class="headerlink" href="#module-mdp.broker" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="mdp.broker.MDPBroker">
+<em class="property">class </em><tt class="descclassname">mdp.broker.</tt><tt class="descname">MDPBroker</tt><big>(</big><em>context</em>, <em>main_ep</em>, <em>opt_ep=None</em>, <em>worker_q=None</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker" title="Permalink to this definition">¶</a></dt>
+<dd><p>The MDP broker class.</p>
+<p>The broker routes messages from clients to appropriate workers based on the
+requested service.</p>
+<p>This base class defines the overall functionality and the API. Subclasses are
+ment to implement additional features (like logging).</p>
+<p>The broker uses ØMQ XREQ sockets to deal witch clients and workers. These sockets
+are wrapped in pyzmq streams to fit well into IOLoop.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The workers will <em>always</em> be served by the <cite>main_ep</cite> endpoint.</p>
+<p class="last">In a two-endpoint setup clients will be handled via the <cite>opt_ep</cite>
+endpoint.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>context</strong> (<em>zmq.Context</em>) &#8211; the context to use for socket creation.</li>
+<li><strong>main_ep</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the primary endpoint for workers and clients.</li>
+<li><strong>opt_ep</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; is an optional 2nd endpoint.</li>
+<li><strong>worker_q</strong> (<em>class</em>) &#8211; the class to be used for the worker-queue.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.register_worker">
+<tt class="descname">register_worker</tt><big>(</big><em>wid</em>, <em>service</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.register_worker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register the worker id and add it to the given service.</p>
+<p>Does nothing if worker is already known.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>wid</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the worker id.</li>
+<li><strong>service</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the service name.</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.unregister_worker">
+<tt class="descname">unregister_worker</tt><big>(</big><em>wid</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.unregister_worker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unregister the worker with the given id.</p>
+<p>If the worker id is not registered, nothing happens.</p>
+<p>Will stop all timers for the worker.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>wid</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the worker id.</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.disconnect">
+<tt class="descname">disconnect</tt><big>(</big><em>wid</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send disconnect command and unregister worker.</p>
+<p>If the worker id is not registered, nothing happens.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><strong>wid</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; the worker id.</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.shutdown">
+<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shutdown broker.</p>
+<p>Will unregister all workers, stop all timers and ignore all further
+messages.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The instance MUST not be used after <a class="reference internal" href="#mdp.broker.MDPBroker.shutdown" title="mdp.broker.MDPBroker.shutdown"><tt class="xref py py-func docutils literal"><span class="pre">shutdown()</span></tt></a> has been called.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.on_timer">
+<tt class="descname">on_timer</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_timer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method called on timer expiry.</p>
+<p>Checks which workers are dead and unregisters them.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.on_ready">
+<tt class="descname">on_ready</tt><big>(</big><em>rp</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_ready" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process worker READY command.</p>
+<p>Registers the worker for a service.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
+<li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.on_reply">
+<tt class="descname">on_reply</tt><big>(</big><em>rp</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_reply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process worker REPLY command.</p>
+<p>Route the <cite>msg</cite> to the client given by the address(es) in front of <cite>msg</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
+<li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.on_heartbeat">
+<tt class="descname">on_heartbeat</tt><big>(</big><em>rp</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_heartbeat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process worker HEARTBEAT command.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
+<li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.on_disconnect">
+<tt class="descname">on_disconnect</tt><big>(</big><em>rp</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process worker DISCONNECT command.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
+<li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.on_client">
+<tt class="descname">on_client</tt><big>(</big><em>proto</em>, <em>rp</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method called on client message.</p>
+<p>proto is the protocol id sent.
+ret_id is the socket id where the message came from.</p>
+<p>Frame 0 is the requested service.
+The remaining frames are the request to forward to the worker.</p>
+<p>If the service is unknown to the broker or currently no worker available
+for the service, the message is ignored.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
+<li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.on_worker">
+<tt class="descname">on_worker</tt><big>(</big><em>proto</em>, <em>rp</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_worker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method called on worker message.</p>
+<p>proto is the protocol id sent.
+ret_id is the socket id where the message came from.</p>
+<p>Frame 0 is the command id.
+The remaining frames depend on the command.</p>
+<p>This method determines the command sent by the worker and
+calls the appropriate method. If the command is unknown the
+message is ignored.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
+<li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.broker.MDPBroker.on_message">
+<tt class="descname">on_message</tt><big>(</big><em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Processes given message.</p>
+<p>msg is a list of strs representing the messages as received.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="mdp.broker.ServiceQueue">
+<em class="property">class </em><tt class="descclassname">mdp.broker.</tt><tt class="descname">ServiceQueue</tt><a class="headerlink" href="#mdp.broker.ServiceQueue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class defining the Queue interface for workers for a service.</p>
+<p>The methods on this class are the only ones used by the broker.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="worker.html"
+                        title="previous chapter">MDP worker module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="util.html"
+                        title="next chapter">MDP util module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/broker.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="util.html" title="MDP util module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="worker.html" title="MDP worker module"
+             >previous</a> |</li>
+        <li><a href="index.html">ØMQ Majordomo Protocol Implementation v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Guido Goldstein.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
