@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-__license__ = '''
+__license__ = """
     This file is part of MDP.
 
     MDP is free software: you can redistribute it and/or modify
@@ -16,11 +16,14 @@ __license__ = '''
 
     You should have received a copy of the GNU Affero General Public License
     along with MDP.  If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 
 __author__ = 'Guido Goldstein'
 __email__ = 'gst-py@a-nugget.de'
-__version__ = '0.0'
+
+from client import MDPClient
+from worker import MDPWorker
+from broker import MDPBroker
 
 ### Local Variables:
 ### buffer-file-coding-system: utf-8

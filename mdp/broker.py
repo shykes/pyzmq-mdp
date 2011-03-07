@@ -7,7 +7,6 @@ For the MDP specification see: http://rfc.zeromq.org/spec:7
 
 """
 
-
 __license__ = """
     This file is part of MDP.
 
@@ -27,7 +26,6 @@ __license__ = """
 
 __author__ = 'Guido Goldstein'
 __email__ = 'gst-py@a-nugget.de'
-__version__ = '0.0'
 
 
 import sys
@@ -51,6 +49,9 @@ HB_LIVENESS = 5    # HBs to miss before connection counts as dead
 class _WorkerRep(object):
 
     """Helper class to represent a worker in the broker.
+
+    Instances of this class are used to track the state of the attached worker
+    and carry the timers for incomming and outgoing heartbeats.
     """
 
     def __init__(self, wid, service, stream):
@@ -96,13 +97,23 @@ class _WorkerRep(object):
 class ServiceQueue(object):
 
     """Class defining the Queue interface for workers for a service.
+
+    The methods on this class are the only ones used by the broker.
     """
 
     def __init__(self):
+        """Initialize queue instance.
+        """
         self.q = []
         return
 
     def __contains__(self, wid):
+        """Check if given worker id is already in queue.
+
+        :param wid:    the workers id
+        :type wid:     byte-string
+        :rtype:        bool
+        """
         return wid in self.q
 
     def __len__(self):
@@ -115,7 +126,7 @@ class ServiceQueue(object):
             pass
         return
 
-    def put(self, wid):
+    def put(self, wid, *args, **kwargs):
         if wid not in self.q:
             self.q.append(wid)
         return
@@ -126,9 +137,9 @@ class ServiceQueue(object):
         return self.q.pop(0)
 #
 
-class BrokerBase(object):
+class MDPBroker(object):
 
-    """The MDP broker base class.
+    """The MDP broker class.
 
     The broker routes messages from clients to appropriate workers based on the
     requested service.
@@ -144,18 +155,31 @@ class BrokerBase(object):
     WORKER_PROTO = b'MDPW01'
 
 
-    def __init__(self, context, master_ep, client_ep=None):
+    def __init__(self, context, main_ep, opt_ep=None, worker_q=None):
+        """Init MDPBroker instance.
+
+        :param context:    the zmq context to use for socket creation.
+        :type context:     zmq.Context instance
+        :param main_ep:    the primary endpoint for workers and clients.
+        :type main_ep:     byte-string
+        :param opt_ep:     is an optional 2nd endpoint.
+        :type opt_ep:      byte-string
+        :param worker_q:   the class to be used for the worker-queue.
+        :type opt_ep:      class or None
+
+#        :rtype: ConfigItem instance or List of ConfigItems or None
+        """
         socket = context.socket(zmq.XREP)
-        socket.bind(master_ep)
-        self.master_stream = ZMQStream(socket)
-        self.master_stream.on_recv(self.on_message)
-        if client_ep:
+        socket.bind(main_ep)
+        self.main_stream = ZMQStream(socket)
+        self.main_stream.on_recv(self.on_message)
+        if opt_ep:
             socket = context.socket(zmq.XREP)
-            socket.bind(client_ep)
+            socket.bind(opt_ep)
             self.client_stream = ZMQStream(socket)
             self.client_stream.on_recv(self.on_message)
         else:
-            self.client_stream = self.master_stream
+            self.client_stream = self.main_stream
         self._workers = {}
         # services contain the worker queue and the request queue
         self._services = {}
@@ -175,7 +199,7 @@ class BrokerBase(object):
         """
         if wid in self._workers:
             return
-        self._workers[wid] = _WorkerRep(wid, service, self.master_stream)
+        self._workers[wid] = _WorkerRep(wid, service, self.main_stream)
         if service in self._services:
             wq, wr = self._services[service]
             wq.put(wid)
@@ -203,18 +227,18 @@ class BrokerBase(object):
         """Send disconnect command to given id and unregister worker.
         """
         to_send = [ wid, self.WORKER_PROTO, b'\x05' ]
-        self.master_stream.send_multipart(to_send)
+        self.main_stream.send_multipart(to_send)
         self.unregister_worker(wid)
         return
 
     def shutdown(self):
-        if self.client_stream == self.master_stream:
+        if self.client_stream == self.main_stream:
             self.client_stream = None
-        self.master_stream.on_recv(None)
-        self.master_stream.socket.setsockopt(zmq.LINGER, 0)
-        self.master_stream.socket.close()
-        self.master_stream.close()
-        self.master_stream = None
+        self.main_stream.on_recv(None)
+        self.main_stream.socket.setsockopt(zmq.LINGER, 0)
+        self.main_stream.socket.close()
+        self.main_stream.close()
+        self.main_stream = None
         if self.client_stream:
             self.client_stream.on_recv(None)
             self.client_stream.socket.setsockopt(zmq.LINGER, 0)
@@ -310,7 +334,7 @@ class BrokerBase(object):
             to_send.extend(rp)
             to_send.append(b'')
             to_send.extend(msg)
-            self.master_stream.send_multipart(to_send)
+            self.main_stream.send_multipart(to_send)
         except KeyError:
             # unknwon service
             # ignore request
@@ -353,14 +377,6 @@ class BrokerBase(object):
             print 'Broker unknown Protocol: "%s"' % t
         # ignores unknown messages
         return
-#
-
-class MDPBroker(BrokerBase):
-
-    """Basic implementation of the MDP broker.
-    """
-
-    pass
 #
 ###
 
