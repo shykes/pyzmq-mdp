@@ -141,6 +141,28 @@ endpoint.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="mdp.broker.MDPBroker.client_response">
+<tt class="descname">client_response</tt><big>(</big><em>rp</em>, <em>service</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.client_response" title="Permalink to this definition">¶</a></dt>
+<dd><p>Package and send reply to client.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rp</strong> (<em>list of str</em>) &#8211; return address stack</li>
+<li><strong>service</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; name of service</li>
+<li><strong>msg</strong> (<em>list of str</em>) &#8211; message parts</li>
+</ul>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="mdp.broker.MDPBroker.shutdown">
 <tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker.shutdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker.shutdown" title="Permalink to this definition">¶</a></dt>
 <dd><p>Shutdown broker.</p>
@@ -263,18 +285,33 @@ messages.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="mdp.broker.MDPBroker.on_mmi">
+<tt class="descname">on_mmi</tt><big>(</big><em>rp</em>, <em>service</em>, <em>msg</em><big>)</big><a class="headerlink" href="#mdp.broker.MDPBroker.on_mmi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process MMI request.</p>
+<p>For now only mmi.service is handled.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="mdp.broker.MDPBroker.on_client">
 <tt class="descname">on_client</tt><big>(</big><em>proto</em>, <em>rp</em>, <em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker.on_client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker.on_client" title="Permalink to this definition">¶</a></dt>
 <dd><p>Method called on client message.</p>
 <p>Frame 0 of msg is the requested service.
 The remaining frames are the request to forward to the worker.</p>
-<p>If the service is unknown to the broker the message is
-ignored.</p>
-<p>If currently no worker is available for a known service, the
-message is queued for later delivery.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If the service is unknown to the broker the message is</p>
+</div>
+<p>ignored.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If currently no worker is available for a known service, the</p>
+</div>
+<p>message is queued for later delivery.</p>
 <p>If a worker is available for the requested service, the
 message is repackaged and sent to the worker. The worker in
 question is removed from the pool of available workers.</p>
+<p>If the service name starts with <cite>mmi.</cite>, the message is passed to
+the internal _MMI handler.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
