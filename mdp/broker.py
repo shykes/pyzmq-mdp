@@ -114,7 +114,7 @@ class MDPBroker(object):
         """
         if wid in self._workers:
             return
-        self._workers[wid] = _WorkerRep(wid, service, self.main_stream)
+        self._workers[wid] = _WorkerRep(self.WORKER_PROTO, wid, service, self.main_stream)
         if service in self._services:
             wq, wr = self._services[service]
             wq.put(wid)
@@ -275,6 +275,8 @@ class MDPBroker(object):
     def on_disconnect(self, rp, msg):
         """Process worker DISCONNECT command.
 
+        Unregisters the worker who sent this message.
+
         :param rp:  return address stack
         :type rp:   list of str
         :param msg: message parts
@@ -282,26 +284,32 @@ class MDPBroker(object):
 
         :rtype: None
         """
-        ret_id = rp[0]
-        self.unregister_worker(ret_id)
+        wid = rp[0]
+        self.unregister_worker(wid)
         return
 
     def on_client(self, proto, rp, msg):
         """Method called on client message.
 
-        proto is the protocol id sent.
-        ret_id is the socket id where the message came from.
-
-        Frame 0 is the requested service.
+        Frame 0 of msg is the requested service.
         The remaining frames are the request to forward to the worker.
 
-        If the service is unknown to the broker or currently no worker available
-        for the service, the message is ignored.
+        If the service is unknown to the broker the message is
+        ignored.
 
-        :param rp:  return address stack
-        :type rp:   list of str
-        :param msg: message parts
-        :type msg:  list of str
+        If currently no worker is available for a known service, the
+        message is queued for later delivery.
+
+        If a worker is available for the requested service, the
+        message is repackaged and sent to the worker. The worker in
+        question is removed from the pool of available workers.
+
+        :param proto: the protocol id sent
+        :type proto:  str
+        :param rp:    return address stack
+        :type rp:     list of str
+        :param msg:   message parts
+        :type msg:    list of str
 
         :rtype: None
         """
@@ -330,16 +338,15 @@ class MDPBroker(object):
     def on_worker(self, proto, rp, msg):
         """Method called on worker message.
 
-        proto is the protocol id sent.
-        ret_id is the socket id where the message came from.
-
-        Frame 0 is the command id.
+        Frame 0 of msg is the command id.
         The remaining frames depend on the command.
 
         This method determines the command sent by the worker and
         calls the appropriate method. If the command is unknown the
-        message is ignored.
+        message is ignored and a DISCONNECT is sent.
 
+        :param proto: the protocol id sent
+        :type proto:  str
         :param rp:  return address stack
         :type rp:   list of str
         :param msg: message parts
@@ -351,13 +358,23 @@ class MDPBroker(object):
         if cmd in self._worker_cmds:
             fnc = self._worker_cmds[cmd]
             fnc(rp, msg)
-        # ignore unknown command
+        else:
+            # ignore unknown command
+            # DISCONNECT worker
+            self.disconnect(rp[0])
         return
 
     def on_message(self, msg):
         """Processes given message.
 
-        msg is a list of strs representing the messages as received.
+        Decides what kind of message it is -- client or worker -- and
+        calls the appropriate method. If unknown, the message is
+        ignored.
+
+        :param msg: message parts
+        :type msg:  list of str
+
+        :rtype: None
         """
         rp, msg = split_address(msg)
         # dispatch on first frame after path
@@ -368,7 +385,6 @@ class MDPBroker(object):
             self.on_client(t, rp, msg)
         else:
             print 'Broker unknown Protocol: "%s"' % t
-        # ignores unknown messages
         return
 #
 
@@ -378,43 +394,59 @@ class _WorkerRep(object):
 
     Instances of this class are used to track the state of the attached worker
     and carry the timers for incomming and outgoing heartbeats.
+
+    :param proto:    the worker protocol id.
+    :type wid:       str
+    :param wid:      the worker id.
+    :type wid:       str
+    :param service:  service this worker serves
+    :type service:   str
+    :param stream:   the ZMQStream used to send messages
+    :type stream:    ZMQStream
     """
 
-    def __init__(self, wid, service, stream):
+    def __init__(self, proto, wid, service, stream):
+        self.proto = proto
         self.id = wid
         self.service = service
         self.curr_liveness = HB_LIVENESS
         self.stream = stream
         self.last_hb = 0
-        self.hb_in_timer = PeriodicCallback(self.on_tick, HB_INTERVAL)
-        self.hb_in_timer.start()
         self.hb_out_timer = PeriodicCallback(self.send_hb, HB_INTERVAL)
         self.hb_out_timer.start()
         return
 
-    def on_tick(self):
-        self.curr_liveness -= 1
-        return
-
     def send_hb(self):
-        msg = [ self.id, b'', b"MDPW01", chr(4) ]
+        """Called on every HB_INTERVAL.
+
+        Decrements the current liveness by one.
+
+        Sends heartbeat to worker.
+        """
+        self.curr_liveness -= 1
+        msg = [ self.id, b'', self.proto, chr(4) ]
         self.stream.send_multipart(msg)
         return
 
-    def on_heartbeat(self, t=None):
+    def on_heartbeat(self):
+        """Called when a heartbeat message from the worker was received.
+
+        Sets current liveness to HB_LIVENESS.
+        """
         self.curr_liveness = HB_LIVENESS
-        if t is None:
-            t = time.time()
-        self.last_hb = t
         return
 
     def is_alive(self):
+        """Returns True when the worker is considered alive.
+        """
         return self.curr_liveness > 0
 
     def shutdown(self):
-        self.hb_in_timer.stop()
+        """Cleanup worker.
+
+        Stops timer.
+        """
         self.hb_out_timer.stop()
-        self.hb_in_timer = None
         self.hb_out_timer = None
         self.stream = None
         return
