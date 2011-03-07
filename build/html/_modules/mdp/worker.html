@@ -1,0 +1,303 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>mdp.worker &mdash; ØMQ Majordomo Protocol Implementation v0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="ØMQ Majordomo Protocol Implementation v0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">ØMQ Majordomo Protocol Implementation v0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for mdp.worker</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+<span class="sd">&quot;&quot;&quot;Module containing worker functionality for the MDP implementation.</span>
+
+<span class="sd">For the MDP specification see: http://rfc.zeromq.org/spec:7</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">__license__</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">    This file is part of MDP.</span>
+
+<span class="s">    MDP is free software: you can redistribute it and/or modify</span>
+<span class="s">    it under the terms of the GNU Affero General Public License as published by</span>
+<span class="s">    the Free Software Foundation, either version 3 of the License, or</span>
+<span class="s">    (at your option) any later version.</span>
+
+<span class="s">    MDP is distributed in the hope that it will be useful,</span>
+<span class="s">    but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="s">    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="s">    GNU Affero General Public License for more details.</span>
+
+<span class="s">    You should have received a copy of the GNU Affero General Public License</span>
+<span class="s">    along with MDP.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+<span class="s">&quot;&quot;&quot;</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;Guido Goldstein&#39;</span>
+<span class="n">__email__</span> <span class="o">=</span> <span class="s">&#39;gst-py@a-nugget.de&#39;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s">&#39;0.0&#39;</span>
+
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">exceptions</span> <span class="kn">import</span> <span class="ne">UserWarning</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+
+<span class="kn">import</span> <span class="nn">zmq</span>
+<span class="kn">from</span> <span class="nn">zmq.eventloop.zmqstream</span> <span class="kn">import</span> <span class="n">ZMQStream</span>
+<span class="kn">from</span> <span class="nn">zmq.eventloop.ioloop</span> <span class="kn">import</span> <span class="n">IOLoop</span><span class="p">,</span> <span class="n">DelayedCallback</span><span class="p">,</span> <span class="n">PeriodicCallback</span>
+
+<span class="kn">from</span> <span class="nn">util</span> <span class="kn">import</span> <span class="n">split_address</span>
+
+<span class="c">###</span>
+
+<div class="viewcode-block" id="ConnectionNotReadyError"><a class="viewcode-back" href="../../worker.html#mdp.worker.ConnectionNotReadyError">[docs]</a><span class="k">class</span> <span class="nc">ConnectionNotReadyError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Exception raised when attempting to use the MDPWorker before the handshake took place.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+<span class="c">#</span>
+</div>
+<div class="viewcode-block" id="MissingHeartbeat"><a class="viewcode-back" href="../../worker.html#mdp.worker.MissingHeartbeat">[docs]</a><span class="k">class</span> <span class="nc">MissingHeartbeat</span><span class="p">(</span><span class="ne">UserWarning</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Exception raised when a heartbeat was not received on time.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+<span class="c">#</span>
+<span class="c">###</span>
+</div>
+<div class="viewcode-block" id="MDPWorker"><a class="viewcode-back" href="../../worker.html#mdp.worker.MDPWorker">[docs]</a><span class="k">class</span> <span class="nc">MDPWorker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;Class for the MDP worker side.</span>
+
+<span class="sd">    Thin encapsulation of a zmq.XREQ socket.</span>
+<span class="sd">    Provides a send method with optional timeout parameter.</span>
+
+<span class="sd">    Will use a timeout to indicate a broker failure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_proto_version</span> <span class="o">=</span> <span class="n">b</span><span class="s">&#39;MDPW01&#39;</span>
+
+    <span class="c"># TODO: integrate that into API</span>
+    <span class="n">HB_INTERVAL</span> <span class="o">=</span> <span class="mi">1000</span>  <span class="c"># in milliseconds</span>
+    <span class="n">HB_LIVENESS</span> <span class="o">=</span> <span class="mi">3</span>    <span class="c"># HBs to miss before connection counts as dead</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="n">service</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize the MDPWorker.</span>
+
+<span class="sd">        context is the zmq context to create the socket from.</span>
+<span class="sd">        service is a byte-string with the service name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">context</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span> <span class="o">=</span> <span class="n">endpoint</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">service</span> <span class="o">=</span> <span class="n">service</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tmo</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">need_handshake</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_delayed_cb</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_stream</span><span class="p">()</span>
+        <span class="k">return</span>
+
+    <span class="k">def</span> <span class="nf">_create_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper to create the socket and the stream.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">socket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">XREQ</span><span class="p">)</span>
+        <span class="n">ioloop</span> <span class="o">=</span> <span class="n">IOLoop</span><span class="o">.</span><span class="n">instance</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="n">ZMQStream</span><span class="p">(</span><span class="n">socket</span><span class="p">,</span> <span class="n">ioloop</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">on_recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">LINGER</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span> <span class="o">=</span> <span class="n">PeriodicCallback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tick</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">HB_INTERVAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_send_ready</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">return</span>
+
+    <span class="k">def</span> <span class="nf">_send_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper method to prepare and send the workers READY message.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ready_msg</span> <span class="o">=</span> <span class="p">[</span> <span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proto_version</span><span class="p">,</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">service</span> <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">ready_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HB_LIVENESS</span>
+        <span class="k">return</span>
+
+    <span class="k">def</span> <span class="nf">_tick</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Method called every HB_INTERVAL milliseconds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">-=</span> <span class="mi">1</span>
+<span class="c">##         print &#39;%.3f tick - %d&#39; % (time.time(), self.curr_liveness)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_hb</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">print</span> <span class="s">&#39;</span><span class="si">%.3f</span><span class="s"> lost connection&#39;</span> <span class="o">%</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="c"># ouch, connection seems to be dead</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+        <span class="c"># try to recreate it</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_delayed_cb</span> <span class="o">=</span> <span class="n">DelayedCallback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_stream</span><span class="p">,</span> <span class="mi">5000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_delayed_cb</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">return</span>
+
+<div class="viewcode-block" id="MDPWorker.send_hb"><a class="viewcode-back" href="../../worker.html#mdp.worker.MDPWorker.send_hb">[docs]</a>    <span class="k">def</span> <span class="nf">send_hb</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct and send HB message to broker.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">[</span> <span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proto_version</span><span class="p">,</span> <span class="nb">chr</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span>
+</div>
+<div class="viewcode-block" id="MDPWorker.shutdown"><a class="viewcode-back" href="../../worker.html#mdp.worker.MDPWorker.shutdown">[docs]</a>    <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Method to deactivate the worker connection completely.</span>
+
+<span class="sd">        Will delete the stream and the underlying socket.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timed_out</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">need_handshake</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connected</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">return</span>
+</div>
+<div class="viewcode-block" id="MDPWorker.reply"><a class="viewcode-back" href="../../worker.html#mdp.worker.MDPWorker.reply">[docs]</a>    <span class="k">def</span> <span class="nf">reply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Send the given message.</span>
+
+<span class="sd">        msg can either be a byte-string or a list of byte-strings.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<span class="c">##         if self.need_handshake:</span>
+<span class="c">##             raise ConnectionNotReadyError()</span>
+        <span class="c"># prepare full message</span>
+        <span class="n">to_send</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">envelope</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">envelope</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">to_send</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">to_send</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">(</span><span class="n">to_send</span><span class="p">)</span>
+        <span class="k">return</span>
+</div>
+    <span class="k">def</span> <span class="nf">_on_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper method called on message receive.</span>
+
+<span class="sd">        msg is a list w/ the message parts</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># 1st part is empty</span>
+        <span class="n">msg</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c"># 2nd part is protocol version</span>
+        <span class="c"># TODO: version check</span>
+        <span class="n">proto</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c"># 3nd part is message type</span>
+        <span class="n">msg_type</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c"># XXX: hardcoded message types!</span>
+        <span class="c"># any message resets the liveness counter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">need_handshake</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HB_LIVENESS</span>
+        <span class="k">if</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x05</span><span class="s">&#39;</span><span class="p">:</span> <span class="c"># disconnect</span>
+            <span class="k">print</span> <span class="s">&#39;    DISC&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">curr_liveness</span> <span class="o">=</span> <span class="mi">0</span> <span class="c"># reconnect will be triggered by hb timer</span>
+        <span class="k">elif</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x02</span><span class="s">&#39;</span><span class="p">:</span> <span class="c"># request</span>
+            <span class="c"># remaining parts are the user message</span>
+            <span class="n">envelope</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">split_address</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">envelope</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">envelope</span> <span class="o">=</span> <span class="p">[</span> <span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_proto_version</span><span class="p">,</span> <span class="s">&#39;</span><span class="se">\x03</span><span class="s">&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">envelope</span> <span class="c"># REPLY</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">envelope</span> <span class="o">=</span> <span class="n">envelope</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_request</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># invalid message</span>
+            <span class="c"># ignored</span>
+            <span class="k">pass</span>
+        <span class="k">return</span>
+
+<div class="viewcode-block" id="MDPWorker.on_request"><a class="viewcode-back" href="../../worker.html#mdp.worker.MDPWorker.on_request">[docs]</a>    <span class="k">def</span> <span class="nf">on_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Public method called when a request arrived.</span>
+
+<span class="sd">        Must be overloaded!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+<span class="c">#</span>
+
+<span class="c">### Local Variables:</span>
+<span class="c">### buffer-file-coding-system: utf-8</span>
+<span class="c">### mode: python</span>
+<span class="c">### End:</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">ØMQ Majordomo Protocol Implementation v0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Guido Goldstein.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

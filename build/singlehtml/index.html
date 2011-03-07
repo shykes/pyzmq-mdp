@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>MDP broker module &mdash; ØMQ Majordomo Protocol Implementation v0.1 documentation</title>
+    <title>ØMQ Majordomo Protocol Implementation v0.1 documentation</title>
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -22,27 +22,13 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="ØMQ Majordomo Protocol Implementation v0.1 documentation" href="index.html" />
-    <link rel="next" title="MDP util module" href="util.html" />
-    <link rel="prev" title="MDP worker module" href="worker.html" /> 
+    <link rel="top" title="None" href="#" /> 
   </head>
   <body>
     <div class="related">
       <h3>Navigation</h3>
       <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="genindex.html" title="General Index"
-             accesskey="I">index</a></li>
-        <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="util.html" title="MDP util module"
-             accesskey="N">next</a> |</li>
-        <li class="right" >
-          <a href="worker.html" title="MDP worker module"
-             accesskey="P">previous</a> |</li>
-        <li><a href="index.html">ØMQ Majordomo Protocol Implementation v0.1 documentation</a> &raquo;</li> 
+        <li><a href="#">ØMQ Majordomo Protocol Implementation v0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -51,8 +37,139 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="module-mdp.broker">
-<span id="mdp-broker-module"></span><h1>MDP broker module<a class="headerlink" href="#module-mdp.broker" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-mdp">
+<span id="welcome-to-omq-majordomo-protocol-implementation-s-documentation"></span><h1>Welcome to ØMQ Majordomo Protocol Implementation&#8217;s documentation!<a class="headerlink" href="#module-mdp" title="Permalink to this headline">¶</a></h1>
+<p>This package implements the <cite>ØMQ Majordomo Protocol</cite> as specified under <a class="reference external" href="http://rfc.zeromq.org/spec:7">http://rfc.zeromq.org/spec:7</a></p>
+<div class="section" id="terms-used">
+<h2>Terms used<a class="headerlink" href="#terms-used" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><dl class="docutils">
+<dt>worker</dt>
+<dd>process offering exactly one service in request/reply fashion.</dd>
+<dt>client</dt>
+<dd>independant process using a service in request/reply fashion.</dd>
+<dt>broker</dt>
+<dd>process routing messages from a client to a worker and back.</dd>
+<dt>worker id</dt>
+<dd>the  ØMQ socket identity of the worker socket communicating with the broker.</dd>
+</dl>
+</div></blockquote>
+</div>
+<div class="section" id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<span id="document-client"></span><div class="section" id="mdp-client-module">
+<h3>MDP client module<a class="headerlink" href="#mdp-client-module" title="Permalink to this headline">¶</a></h3>
+<p>bla bla bla</p>
+<span class="target" id="module-mdp.client"></span><p>Module containing client functionality for the MDP implementation.</p>
+<p>For the MDP specification see: <a class="reference external" href="http://rfc.zeromq.org/spec:7">http://rfc.zeromq.org/spec:7</a></p>
+<dl class="exception">
+<dt id="mdp.client.InvalidStateError">
+<em class="property">exception </em><tt class="descclassname">mdp.client.</tt><tt class="descname">InvalidStateError</tt><a class="reference internal" href="_modules/mdp/client.html#InvalidStateError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.client.InvalidStateError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception raised when the requested action is not available due to socket state.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="mdp.client.MDPClient">
+<em class="property">class </em><tt class="descclassname">mdp.client.</tt><tt class="descname">MDPClient</tt><big>(</big><em>context</em>, <em>endpoint</em>, <em>service</em><big>)</big><a class="reference internal" href="_modules/mdp/client.html#MDPClient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.client.MDPClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for the MDP client side.</p>
+<p>Thin encapsulation of a zmq.REQ socket.
+Provides a send method with optional timout parameter.</p>
+<p>Will use a timeout to indicate a broker failure.</p>
+<dl class="method">
+<dt id="mdp.client.MDPClient.on_message">
+<tt class="descname">on_message</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/client.html#MDPClient.on_message"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.client.MDPClient.on_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Public method called when a message arrived.</p>
+<p>Should be overloaded!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.client.MDPClient.on_timeout">
+<tt class="descname">on_timeout</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/client.html#MDPClient.on_timeout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.client.MDPClient.on_timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Public method called when a timeout occured.</p>
+<p>Should be overloaded!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.client.MDPClient.send">
+<tt class="descname">send</tt><big>(</big><em>msg</em>, <em>timeout=None</em><big>)</big><a class="reference internal" href="_modules/mdp/client.html#MDPClient.send"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.client.MDPClient.send" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send the given message.</p>
+<p>msg can either be a byte-string or a list of byte-strings.
+timeout is the time to wait for response in milliseconds.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.client.MDPClient.shutdown">
+<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/client.html#MDPClient.shutdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.client.MDPClient.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to deactivate the client connection completely.</p>
+<p>Will delete the stream and the underlying socket.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="mdp.client.RequestTimeout">
+<em class="property">exception </em><tt class="descclassname">mdp.client.</tt><tt class="descname">RequestTimeout</tt><a class="reference internal" href="_modules/mdp/client.html#RequestTimeout"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.client.RequestTimeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception raised when the request timed out.</p>
+</dd></dl>
+
+</div>
+<span id="document-worker"></span><div class="section" id="mdp-worker-module">
+<h3>MDP worker module<a class="headerlink" href="#mdp-worker-module" title="Permalink to this headline">¶</a></h3>
+<p>bla bla bla</p>
+<span class="target" id="module-mdp.worker"></span><p>Module containing worker functionality for the MDP implementation.</p>
+<p>For the MDP specification see: <a class="reference external" href="http://rfc.zeromq.org/spec:7">http://rfc.zeromq.org/spec:7</a></p>
+<dl class="exception">
+<dt id="mdp.worker.ConnectionNotReadyError">
+<em class="property">exception </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">ConnectionNotReadyError</tt><a class="reference internal" href="_modules/mdp/worker.html#ConnectionNotReadyError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.ConnectionNotReadyError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception raised when attempting to use the MDPWorker before the handshake took place.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="mdp.worker.MDPWorker">
+<em class="property">class </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">MDPWorker</tt><big>(</big><em>context</em>, <em>endpoint</em>, <em>service</em><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for the MDP worker side.</p>
+<p>Thin encapsulation of a zmq.XREQ socket.
+Provides a send method with optional timeout parameter.</p>
+<p>Will use a timeout to indicate a broker failure.</p>
+<dl class="method">
+<dt id="mdp.worker.MDPWorker.on_request">
+<tt class="descname">on_request</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker.on_request"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker.on_request" title="Permalink to this definition">¶</a></dt>
+<dd><p>Public method called when a request arrived.</p>
+<p>Must be overloaded!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.worker.MDPWorker.reply">
+<tt class="descname">reply</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker.reply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker.reply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send the given message.</p>
+<p>msg can either be a byte-string or a list of byte-strings.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.worker.MDPWorker.send_hb">
+<tt class="descname">send_hb</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker.send_hb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker.send_hb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct and send HB message to broker.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="mdp.worker.MDPWorker.shutdown">
+<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker.shutdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to deactivate the worker connection completely.</p>
+<p>Will delete the stream and the underlying socket.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="mdp.worker.MissingHeartbeat">
+<em class="property">exception </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">MissingHeartbeat</tt><a class="reference internal" href="_modules/mdp/worker.html#MissingHeartbeat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MissingHeartbeat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception raised when a heartbeat was not received on time.</p>
+</dd></dl>
+
+</div>
+<span id="document-broker"></span><div class="section" id="module-mdp.broker">
+<span id="mdp-broker-module"></span><h3>MDP broker module<a class="headerlink" href="#module-mdp.broker" title="Permalink to this headline">¶</a></h3>
 <dl class="class">
 <dt id="mdp.broker.MDPBroker">
 <em class="property">class </em><tt class="descclassname">mdp.broker.</tt><tt class="descname">MDPBroker</tt><big>(</big><em>context</em>, <em>main_ep</em>, <em>opt_ep=None</em>, <em>worker_q=None</em><big>)</big><a class="reference internal" href="_modules/mdp/broker.html#MDPBroker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.broker.MDPBroker" title="Permalink to this definition">¶</a></dt>
@@ -148,7 +265,7 @@ endpoint.</p>
 messages.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">The instance MUST not be used after <a class="reference internal" href="#mdp.broker.MDPBroker.shutdown" title="mdp.broker.MDPBroker.shutdown"><tt class="xref py py-func docutils literal"><span class="pre">shutdown()</span></tt></a> has been called.</p>
+<p class="last">The instance MUST not be used after <a class="reference internal" href="index.html#mdp.broker.MDPBroker.shutdown" title="mdp.broker.MDPBroker.shutdown"><tt class="xref py py-func docutils literal"><span class="pre">shutdown()</span></tt></a> has been called.</p>
 </div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -333,6 +450,37 @@ message is ignored.</p>
 </dd></dl>
 
 </div>
+<span id="document-util"></span><div class="section" id="mdp-util-module">
+<h3>MDP util module<a class="headerlink" href="#mdp-util-module" title="Permalink to this headline">¶</a></h3>
+<p>bla bla bla</p>
+<span class="target" id="module-mdp.util"></span><p>Module containing the main components for the MDP broker.</p>
+<p>For the MDP specification see: <a class="reference external" href="http://rfc.zeromq.org/spec:7">http://rfc.zeromq.org/spec:7</a></p>
+<dl class="function">
+<dt id="mdp.util.socketid2hex">
+<tt class="descclassname">mdp.util.</tt><tt class="descname">socketid2hex</tt><big>(</big><em>sid</em><big>)</big><a class="reference internal" href="_modules/mdp/util.html#socketid2hex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.util.socketid2hex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns printable hex representation of a socket id.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="mdp.util.split_address">
+<tt class="descclassname">mdp.util.</tt><tt class="descname">split_address</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/util.html#split_address"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.util.split_address" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to split return Id and message received by XREP.</p>
+<p>Returns 2-tuple with return Id and remaining message parts.
+Empty frames after the Id are stripped.</p>
+</dd></dl>
+
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
 
 
           </div>
@@ -340,17 +488,14 @@ message is ignored.</p>
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="worker.html"
-                        title="previous chapter">MDP worker module</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="util.html"
-                        title="next chapter">MDP util module</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/broker.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-client">MDP client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-worker">MDP worker module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-broker">MDP broker module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html#document-util">MDP util module</a></li>
+</ul>
+
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -371,19 +516,7 @@ message is ignored.</p>
     <div class="related">
       <h3>Navigation</h3>
       <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="genindex.html" title="General Index"
-             >index</a></li>
-        <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="util.html" title="MDP util module"
-             >next</a> |</li>
-        <li class="right" >
-          <a href="worker.html" title="MDP worker module"
-             >previous</a> |</li>
-        <li><a href="index.html">ØMQ Majordomo Protocol Implementation v0.1 documentation</a> &raquo;</li> 
+        <li><a href="#">ØMQ Majordomo Protocol Implementation v0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

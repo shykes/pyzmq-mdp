@@ -58,40 +58,40 @@
 <p>For the MDP specification see: <a class="reference external" href="http://rfc.zeromq.org/spec:7">http://rfc.zeromq.org/spec:7</a></p>
 <dl class="exception">
 <dt id="mdp.worker.ConnectionNotReadyError">
-<em class="property">exception </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">ConnectionNotReadyError</tt><a class="headerlink" href="#mdp.worker.ConnectionNotReadyError" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">ConnectionNotReadyError</tt><a class="reference internal" href="_modules/mdp/worker.html#ConnectionNotReadyError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.ConnectionNotReadyError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Exception raised when attempting to use the MDPWorker before the handshake took place.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="mdp.worker.MDPWorker">
-<em class="property">class </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">MDPWorker</tt><big>(</big><em>context</em>, <em>endpoint</em>, <em>service</em><big>)</big><a class="headerlink" href="#mdp.worker.MDPWorker" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">MDPWorker</tt><big>(</big><em>context</em>, <em>endpoint</em>, <em>service</em><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class for the MDP worker side.</p>
 <p>Thin encapsulation of a zmq.XREQ socket.
 Provides a send method with optional timeout parameter.</p>
 <p>Will use a timeout to indicate a broker failure.</p>
 <dl class="method">
 <dt id="mdp.worker.MDPWorker.on_request">
-<tt class="descname">on_request</tt><big>(</big><em>msg</em><big>)</big><a class="headerlink" href="#mdp.worker.MDPWorker.on_request" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">on_request</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker.on_request"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker.on_request" title="Permalink to this definition">¶</a></dt>
 <dd><p>Public method called when a request arrived.</p>
 <p>Must be overloaded!</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="mdp.worker.MDPWorker.reply">
-<tt class="descname">reply</tt><big>(</big><em>msg</em><big>)</big><a class="headerlink" href="#mdp.worker.MDPWorker.reply" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">reply</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker.reply"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker.reply" title="Permalink to this definition">¶</a></dt>
 <dd><p>Send the given message.</p>
 <p>msg can either be a byte-string or a list of byte-strings.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="mdp.worker.MDPWorker.send_hb">
-<tt class="descname">send_hb</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.worker.MDPWorker.send_hb" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">send_hb</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker.send_hb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker.send_hb" title="Permalink to this definition">¶</a></dt>
 <dd><p>Construct and send HB message to broker.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="mdp.worker.MDPWorker.shutdown">
-<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="headerlink" href="#mdp.worker.MDPWorker.shutdown" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">shutdown</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/mdp/worker.html#MDPWorker.shutdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MDPWorker.shutdown" title="Permalink to this definition">¶</a></dt>
 <dd><p>Method to deactivate the worker connection completely.</p>
 <p>Will delete the stream and the underlying socket.</p>
 </dd></dl>
@@ -100,7 +100,7 @@ Provides a send method with optional timeout parameter.</p>
 
 <dl class="exception">
 <dt id="mdp.worker.MissingHeartbeat">
-<em class="property">exception </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">MissingHeartbeat</tt><a class="headerlink" href="#mdp.worker.MissingHeartbeat" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><tt class="descclassname">mdp.worker.</tt><tt class="descname">MissingHeartbeat</tt><a class="reference internal" href="_modules/mdp/worker.html#MissingHeartbeat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mdp.worker.MissingHeartbeat" title="Permalink to this definition">¶</a></dt>
 <dd><p>Exception raised when a heartbeat was not received on time.</p>
 </dd></dl>
 
