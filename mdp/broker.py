@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-"""Module containing the main components for the MDP broker.
-
-For the MDP specification see: http://rfc.zeromq.org/spec:7
-
-"""
-
 __license__ = """
     This file is part of MDP.
 
@@ -41,10 +35,342 @@ from util import socketid2hex, split_address
 
 ###
 
-HB_INTERVAL = 1000  # in milliseconds
-HB_LIVENESS = 5    # HBs to miss before connection counts as dead
+HB_INTERVAL = 1000  #: in milliseconds
+HB_LIVENESS = 5    #: HBs to miss before connection counts as dead
 
 ###
+
+class MDPBroker(object):
+
+    """The MDP broker class.
+
+    The broker routes messages from clients to appropriate workers based on the
+    requested service.
+
+    This base class defines the overall functionality and the API. Subclasses are
+    ment to implement additional features (like logging).
+
+    The broker uses ØMQ XREQ sockets to deal witch clients and workers. These sockets
+    are wrapped in pyzmq streams to fit well into IOLoop.
+
+    .. note::
+
+      The workers will *always* be served by the `main_ep` endpoint.
+
+      In a two-endpoint setup clients will be handled via the `opt_ep`
+      endpoint.
+
+    :param context:    the context to use for socket creation.
+    :type context:     zmq.Context
+    :param main_ep:    the primary endpoint for workers and clients.
+    :type main_ep:     str
+    :param opt_ep:     is an optional 2nd endpoint.
+    :type opt_ep:      str
+    :param worker_q:   the class to be used for the worker-queue.
+    :type worker_q:    class
+    """
+
+    CLIENT_PROTO = b'MDPC01'  #: Client protocol identifier
+    WORKER_PROTO = b'MDPW01'  #: Worker protocol identifier
+
+
+    def __init__(self, context, main_ep, opt_ep=None, worker_q=None):
+        """Init MDPBroker instance.
+        """
+        socket = context.socket(zmq.XREP)
+        socket.bind(main_ep)
+        self.main_stream = ZMQStream(socket)
+        self.main_stream.on_recv(self.on_message)
+        if opt_ep:
+            socket = context.socket(zmq.XREP)
+            socket.bind(opt_ep)
+            self.client_stream = ZMQStream(socket)
+            self.client_stream.on_recv(self.on_message)
+        else:
+            self.client_stream = self.main_stream
+        self._workers = {}
+        # services contain the worker queue and the request queue
+        self._services = {}
+        self._worker_cmds = { '\x01': self.on_ready,
+                              '\x03': self.on_reply,
+                              '\x04': self.on_heartbeat,
+                              '\x05': self.on_disconnect,
+                              }
+        self.hb_check_timer = PeriodicCallback(self.on_timer, HB_INTERVAL)
+        self.hb_check_timer.start()
+        return
+
+    def register_worker(self, wid, service):
+        """Register the worker id and add it to the given service.
+
+        Does nothing if worker is already known.
+
+        :param wid:    the worker id.
+        :type wid:     str
+        :param service:    the service name.
+        :type service:     str
+
+        :rtype: None
+        """
+        if wid in self._workers:
+            return
+        self._workers[wid] = _WorkerRep(wid, service, self.main_stream)
+        if service in self._services:
+            wq, wr = self._services[service]
+            wq.put(wid)
+        else:
+            q = ServiceQueue()
+            q.put(wid)
+            self._services[service] = (q, [])
+        return
+
+    def unregister_worker(self, wid):
+        """Unregister the worker with the given id.
+
+        If the worker id is not registered, nothing happens.
+
+        Will stop all timers for the worker.
+
+        :param wid:    the worker id.
+        :type wid:     str
+
+        :rtype: None
+        """
+        try:
+            wrep = self._workers[wid]
+        except KeyError:
+            # not registered, ignore
+            return
+        wrep.shutdown()
+        service = wrep.service
+        if service in self._services:
+            wq, wr = self._services[service]
+            wq.remove(wid)
+        del self._workers[wid]
+        return
+
+    def disconnect(self, wid):
+        """Send disconnect command and unregister worker.
+
+        If the worker id is not registered, nothing happens.
+
+        :param wid:    the worker id.
+        :type wid:     str
+
+        :rtype: None
+        """
+        try:
+            wrep = self._workers[wid]
+        except KeyError:
+            # not registered, ignore
+            return
+        to_send = [ wid, self.WORKER_PROTO, b'\x05' ]
+        self.main_stream.send_multipart(to_send)
+        self.unregister_worker(wid)
+        return
+
+    def shutdown(self):
+        """Shutdown broker.
+
+        Will unregister all workers, stop all timers and ignore all further
+        messages.
+
+        .. warning:: The instance MUST not be used after :func:`shutdown` has been called.
+
+        :rtype: None
+        """
+        if self.client_stream == self.main_stream:
+            self.client_stream = None
+        self.main_stream.on_recv(None)
+        self.main_stream.socket.setsockopt(zmq.LINGER, 0)
+        self.main_stream.socket.close()
+        self.main_stream.close()
+        self.main_stream = None
+        if self.client_stream:
+            self.client_stream.on_recv(None)
+            self.client_stream.socket.setsockopt(zmq.LINGER, 0)
+            self.client_stream.socket.close()
+            self.client_stream.close()
+            self.client_stream = None
+        self._workers = {}
+        self._services = {}
+        return
+
+    def on_timer(self):
+        """Method called on timer expiry.
+
+        Checks which workers are dead and unregisters them.
+
+        :rtype: None
+        """
+        for wrep in self._workers.values():
+            if not wrep.is_alive():
+                self.unregister_worker(wrep.id)
+        return
+
+    def on_ready(self, rp, msg):
+        """Process worker READY command.
+
+        Registers the worker for a service.
+
+        :param rp:  return address stack
+        :type rp:   list of str
+        :param msg: message parts
+        :type msg:  list of str
+
+        :rtype: None
+        """
+        ret_id = rp[0]
+        self.register_worker(ret_id, msg[0])
+        return
+
+    def on_reply(self, rp, msg):
+        """Process worker REPLY command.
+
+        Route the `msg` to the client given by the address(es) in front of `msg`.
+
+        :param rp:  return address stack
+        :type rp:   list of str
+        :param msg: message parts
+        :type msg:  list of str
+
+        :rtype: None
+        """
+        ret_id = rp[0]
+        wrep = self._workers[ret_id]
+        service = wrep.service
+        # build client reply and send it
+        to_send, msg = split_address(msg)
+        to_send.extend([b'', self.CLIENT_PROTO, service])
+        to_send.extend(msg)
+        self.client_stream.send_multipart(to_send)
+        # make worker available again
+        wq, wr = self._services[service]
+        wq.put(wrep.id)
+        if wr:
+            proto, rp, msg = wr.pop(0)
+            self.on_client(proto, rp, msg)
+        return
+
+    def on_heartbeat(self, rp, msg):
+        """Process worker HEARTBEAT command.
+
+        :param rp:  return address stack
+        :type rp:   list of str
+        :param msg: message parts
+        :type msg:  list of str
+
+        :rtype: None
+        """
+        ret_id = rp[0]
+        try:
+            worker = self._workers[ret_id]
+            if worker.is_alive():
+                worker.on_heartbeat()
+        except KeyError:
+            # ignore HB for unknown worker
+            pass
+        return
+
+    def on_disconnect(self, rp, msg):
+        """Process worker DISCONNECT command.
+
+        :param rp:  return address stack
+        :type rp:   list of str
+        :param msg: message parts
+        :type msg:  list of str
+
+        :rtype: None
+        """
+        ret_id = rp[0]
+        self.unregister_worker(ret_id)
+        return
+
+    def on_client(self, proto, rp, msg):
+        """Method called on client message.
+
+        proto is the protocol id sent.
+        ret_id is the socket id where the message came from.
+
+        Frame 0 is the requested service.
+        The remaining frames are the request to forward to the worker.
+
+        If the service is unknown to the broker or currently no worker available
+        for the service, the message is ignored.
+
+        :param rp:  return address stack
+        :type rp:   list of str
+        :param msg: message parts
+        :type msg:  list of str
+
+        :rtype: None
+        """
+        service = msg.pop(0)
+        try:
+            wq, wr = self._services[service]
+            wid = wq.get()
+            if not wid:
+                # no worker ready
+                # queue message
+                msg.insert(0, service)
+                wr.append((proto, rp, msg))
+                return
+            wrep = self._workers[wid]
+            to_send = [ wrep.id, b'', self.WORKER_PROTO, b'\x02']
+            to_send.extend(rp)
+            to_send.append(b'')
+            to_send.extend(msg)
+            self.main_stream.send_multipart(to_send)
+        except KeyError:
+            # unknwon service
+            # ignore request
+            print 'broker has no service "%s"' % service
+        return
+
+    def on_worker(self, proto, rp, msg):
+        """Method called on worker message.
+
+        proto is the protocol id sent.
+        ret_id is the socket id where the message came from.
+
+        Frame 0 is the command id.
+        The remaining frames depend on the command.
+
+        This method determines the command sent by the worker and
+        calls the appropriate method. If the command is unknown the
+        message is ignored.
+
+        :param rp:  return address stack
+        :type rp:   list of str
+        :param msg: message parts
+        :type msg:  list of str
+
+        :rtype: None
+        """
+        cmd = msg.pop(0)
+        if cmd in self._worker_cmds:
+            fnc = self._worker_cmds[cmd]
+            fnc(rp, msg)
+        # ignore unknown command
+        return
+
+    def on_message(self, msg):
+        """Processes given message.
+
+        msg is a list of strs representing the messages as received.
+        """
+        rp, msg = split_address(msg)
+        # dispatch on first frame after path
+        t = msg.pop(0)
+        if t.startswith(b'MDPW'):
+            self.on_worker(t, rp, msg)
+        elif t.startswith(b'MDPC'):
+            self.on_client(t, rp, msg)
+        else:
+            print 'Broker unknown Protocol: "%s"' % t
+        # ignores unknown messages
+        return
+#
 
 class _WorkerRep(object):
 
@@ -111,7 +437,7 @@ class ServiceQueue(object):
         """Check if given worker id is already in queue.
 
         :param wid:    the workers id
-        :type wid:     byte-string
+        :type wid:     str
         :rtype:        bool
         """
         return wid in self.q
@@ -135,248 +461,6 @@ class ServiceQueue(object):
         if not self.q:
             return None
         return self.q.pop(0)
-#
-
-class MDPBroker(object):
-
-    """The MDP broker class.
-
-    The broker routes messages from clients to appropriate workers based on the
-    requested service.
-
-    This base class defines the overall functionality and the API. Subclasses are
-    ment to implement additional features (like logging).
-
-    The broker uses ØMQ XREQ sockets to deal witch clients and workers. These sockets
-    are wrapped in pyzmq streams to fit well into IOLoop.
-    """
-
-    CLIENT_PROTO = b'MDPC01'
-    WORKER_PROTO = b'MDPW01'
-
-
-    def __init__(self, context, main_ep, opt_ep=None, worker_q=None):
-        """Init MDPBroker instance.
-
-        :param context:    the zmq context to use for socket creation.
-        :type context:     zmq.Context instance
-        :param main_ep:    the primary endpoint for workers and clients.
-        :type main_ep:     byte-string
-        :param opt_ep:     is an optional 2nd endpoint.
-        :type opt_ep:      byte-string
-        :param worker_q:   the class to be used for the worker-queue.
-        :type opt_ep:      class or None
-
-#        :rtype: ConfigItem instance or List of ConfigItems or None
-        """
-        socket = context.socket(zmq.XREP)
-        socket.bind(main_ep)
-        self.main_stream = ZMQStream(socket)
-        self.main_stream.on_recv(self.on_message)
-        if opt_ep:
-            socket = context.socket(zmq.XREP)
-            socket.bind(opt_ep)
-            self.client_stream = ZMQStream(socket)
-            self.client_stream.on_recv(self.on_message)
-        else:
-            self.client_stream = self.main_stream
-        self._workers = {}
-        # services contain the worker queue and the request queue
-        self._services = {}
-        self._worker_cmds = { '\x01': self.on_ready,
-                              '\x03': self.on_reply,
-                              '\x04': self.on_heartbeat,
-                              '\x05': self.on_disconnect,
-                              }
-        self.hb_check_timer = PeriodicCallback(self.on_timer, HB_INTERVAL)
-        self.hb_check_timer.start()
-        return
-
-    def register_worker(self, wid, service):
-        """Register the worker id and add it to the given service.
-
-        Does nothing if worker is already known.
-        """
-        if wid in self._workers:
-            return
-        self._workers[wid] = _WorkerRep(wid, service, self.main_stream)
-        if service in self._services:
-            wq, wr = self._services[service]
-            wq.put(wid)
-        else:
-            q = ServiceQueue()
-            q.put(wid)
-            self._services[service] = (q, [])
-        return
-
-    def unregister_worker(self, wid):
-        try:
-            wrep = self._workers[wid]
-        except KeyError:
-            # not registered, ignore
-            return
-        wrep.shutdown()
-        service = wrep.service
-        if service in self._services:
-            wq, wr = self._services[service]
-            wq.remove(wid)
-        del self._workers[wid]
-        return
-
-    def disconnect(self, wid):
-        """Send disconnect command to given id and unregister worker.
-        """
-        to_send = [ wid, self.WORKER_PROTO, b'\x05' ]
-        self.main_stream.send_multipart(to_send)
-        self.unregister_worker(wid)
-        return
-
-    def shutdown(self):
-        if self.client_stream == self.main_stream:
-            self.client_stream = None
-        self.main_stream.on_recv(None)
-        self.main_stream.socket.setsockopt(zmq.LINGER, 0)
-        self.main_stream.socket.close()
-        self.main_stream.close()
-        self.main_stream = None
-        if self.client_stream:
-            self.client_stream.on_recv(None)
-            self.client_stream.socket.setsockopt(zmq.LINGER, 0)
-            self.client_stream.socket.close()
-            self.client_stream.close()
-            self.client_stream = None
-        self._workers = {}
-        self._services = {}
-        return
-
-    def on_timer(self):
-        """Method called on timer expiry.
-
-        Determines which workers need a heartbeat.
-        Send the HB to the workers.
-        """
-        for wrep in self._workers.values():
-            if not wrep.is_alive():
-                print "DEAD worker:", socketid2hex(wrep.id)
-                self.unregister_worker(wrep.id)
-        return
-
-    def on_ready(self, rp, msg):
-        """Process worker READY command.
-        """
-        ret_id = rp[0]
-        self.register_worker(ret_id, msg[0])
-        return
-
-    def on_reply(self, rp, msg):
-        """Process worker REPLY command.
-        """
-        ret_id = rp[0]
-        wrep = self._workers[ret_id]
-        service = wrep.service
-        # build client reply and send it
-        to_send, msg = split_address(msg)
-        to_send.extend([b'', self.CLIENT_PROTO, service])
-        to_send.extend(msg)
-        self.client_stream.send_multipart(to_send)
-        # make worker available again
-        wq, wr = self._services[service]
-        wq.put(wrep.id)
-        if wr:
-            proto, rp, msg = wr.pop(0)
-            self.on_client(proto, rp, msg)
-        return
-
-    def on_heartbeat(self, rp, msg):
-        """Process worker HEARTBEAT command.
-        """
-        ret_id = rp[0]
-        try:
-            worker = self._workers[ret_id]
-            if worker.is_alive():
-                worker.on_heartbeat()
-        except KeyError:
-            # ignore HB for unknown worker
-            pass
-        return
-
-    def on_disconnect(self, rp, msg):
-        """Process worker DISCONNECT command.
-        """
-        ret_id = rp[0]
-        self.unregister_worker(ret_id)
-        return
-
-    def on_client(self, proto, rp, msg):
-        """Method called on client message.
-
-        proto is the protocol id sent.
-        ret_id is the socket id where the message came from.
-
-        Frame 0 is the requested service.
-        The remaining frames are the request to forward to the worker.
-
-        If the service is unknown to the broker or currently no worker available
-        for the service, the message is ignored.
-        """
-        service = msg.pop(0)
-        try:
-            wq, wr = self._services[service]
-            wid = wq.get()
-            if not wid:
-                # no worker ready
-                # queue message
-                msg.insert(0, service)
-                wr.append((proto, rp, msg))
-                return
-            wrep = self._workers[wid]
-            to_send = [ wrep.id, b'', self.WORKER_PROTO, b'\x02']
-            to_send.extend(rp)
-            to_send.append(b'')
-            to_send.extend(msg)
-            self.main_stream.send_multipart(to_send)
-        except KeyError:
-            # unknwon service
-            # ignore request
-            print 'broker has no service "%s"' % service
-        return
-
-    def on_worker(self, proto, rp, msg):
-        """Method called on worker message.
-
-        proto is the protocol id sent.
-        ret_id is the socket id where the message came from.
-
-        Frame 0 is the command id.
-        The remaining frames depend on the command.
-
-        This method determines the command sent by the worker and
-        calls the appropriate method. If the command is unknown the
-        message is ignored.
-        """
-        cmd = msg.pop(0)
-        if cmd in self._worker_cmds:
-            fnc = self._worker_cmds[cmd]
-            fnc(rp, msg)
-        # ignore unknown command
-        return
-
-    def on_message(self, msg):
-        """Processes given message.
-
-        msg is a list of byte-strings representing the messages as received.
-        """
-        rp, msg = split_address(msg)
-        # dispatch on first frame after path
-        t = msg.pop(0)
-        if t.startswith(b'MDPW'):
-            self.on_worker(t, rp, msg)
-        elif t.startswith(b'MDPC'):
-            self.on_client(t, rp, msg)
-        else:
-            print 'Broker unknown Protocol: "%s"' % t
-        # ignores unknown messages
-        return
 #
 ###
 

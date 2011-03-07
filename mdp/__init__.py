@@ -1,5 +1,26 @@
 # -*- coding: utf-8 -*-
 
+"""
+
+This package implements the `ØMQ Majordomo Protocol` as specified under http://rfc.zeromq.org/spec:7
+
+Terms used
+----------
+
+  worker
+    process offering exactly one service in request/reply fashion.
+
+  client
+    independant process using a service in request/reply fashion.
+
+  broker
+    process routing messages from a client to a worker and back.
+
+  worker id
+    the  ØMQ socket identity of the worker socket communicating with the broker.
+
+"""
+
 
 __license__ = """
     This file is part of MDP.

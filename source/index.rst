@@ -6,14 +6,19 @@
 Welcome to ØMQ Majordomo Protocol Implementation's documentation!
 =================================================================
 
-Contents:
+.. automodule:: mdp
 
-.. automodule:: mdp.client
-   :members:
-   :undoc-members:
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
+
+   client
+   worker
+   broker
+   util
+
 
 Indices and tables
 ==================
