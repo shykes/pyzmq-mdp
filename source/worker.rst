@@ -1,9 +1,7 @@
 MDP worker module
 =================
 
-bla bla bla
-
-
 .. automodule:: mdp.worker
    :members:
+   :member-order: bysource
 
