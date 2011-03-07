@@ -1,9 +1,7 @@
 MDP client module
 =================
 
-bla bla bla
-
-
 .. automodule:: mdp.client
    :members:
+   :member-order: bysource
 
