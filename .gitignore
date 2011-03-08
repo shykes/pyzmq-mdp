@@ -40,3 +40,8 @@ Thumbs.db
 *include*
 *lib/*
 *build/*
+
+# Eclipse files
+.settings/*
+.pydev*
+.project
