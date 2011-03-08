@@ -22,14 +22,11 @@ __author__ = 'Guido Goldstein'
 __email__ = 'gst-py@a-nugget.de'
 
 
-import sys
-import time
-from exceptions import UserWarning
 from pprint import pprint
 
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
-from zmq.eventloop.ioloop import IOLoop, DelayedCallback, PeriodicCallback
+from zmq.eventloop.ioloop import PeriodicCallback
 
 from util import socketid2hex, split_address
 
