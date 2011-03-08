@@ -311,6 +311,15 @@ class MDPBroker(object):
         """Process MMI request.
 
         For now only mmi.service is handled.
+
+        :param rp:      return address stack
+        :type rp:       list of str
+        :param service: the protocol id sent
+        :type service:  str
+        :param msg:     message parts
+        :type msg:      list of str
+
+        :rtype: None
         """
         if service == b'mmi.service':
             s = msg[0]
@@ -330,18 +339,22 @@ class MDPBroker(object):
         Frame 0 of msg is the requested service.
         The remaining frames are the request to forward to the worker.
 
-        .. note:: If the service is unknown to the broker the message is
-        ignored.
+        .. note::
 
-        .. note:: If currently no worker is available for a known service, the
-        message is queued for later delivery.
+           If the service is unknown to the broker the message is
+           ignored.
+
+        .. note::
+
+           If currently no worker is available for a known service,
+           the message is queued for later delivery.
 
         If a worker is available for the requested service, the
         message is repackaged and sent to the worker. The worker in
         question is removed from the pool of available workers.
 
         If the service name starts with `mmi.`, the message is passed to
-        the internal _MMI handler.
+        the internal MMI_ handler.
 
         .. _MMI: http://rfc.zeromq.org/spec:8
 
