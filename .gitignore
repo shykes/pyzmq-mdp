@@ -45,3 +45,5 @@ Thumbs.db
 .settings/*
 .pydev*
 .project
+.externalToolBuilders
+
