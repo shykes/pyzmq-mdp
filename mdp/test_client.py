@@ -122,11 +122,11 @@ class Test_MDPClient(unittest.TestCase):
         return
 
     def test_02_send_01(self):
-        """Test MDPclient simple send.
+        """Test MDPclient simple request.
         """
         self._start_broker()
         client = MDPClient(self.context, self.endpoint, self.service)
-        client.send(b'XXX')
+        client.request(b'XXX')
         IOLoop.instance().start()
         client.shutdown()
         self.assertEquals(len(self._msgs), 1)
@@ -140,12 +140,12 @@ class Test_MDPClient(unittest.TestCase):
         return
 
     def test_02_send_02(self):
-        """Test MDPclient multipart send.
+        """Test MDPclient multipart request.
         """
         mydata = [b'AAA', b'bbb']
         self._start_broker()
         client = MDPClient(self.context, self.endpoint, self.service)
-        client.send(mydata)
+        client.request(mydata)
         IOLoop.instance().start()
         client.shutdown()
         self.assertEquals(len(self._msgs), 1)
@@ -159,19 +159,19 @@ class Test_MDPClient(unittest.TestCase):
         return
 
     def test_02_send_03(self):
-        """Test MDPclient send in invalid state.
+        """Test MDPclient request in invalid state.
         """
         client = MDPClient(self.context, self.endpoint, self.service)
-        client.send(b'XXX') # ok
-        self.assertRaises(InvalidStateError, client.send, b'AAA')
+        client.request(b'XXX') # ok
+        self.assertRaises(InvalidStateError, client.request, b'AAA')
         client.shutdown()
         return
 
     def test_03_timeout_01(self):
-        """Test MDPclient send w/ timeout.
+        """Test MDPclient request w/ timeout.
         """
         client = MyClient(self.context, self.endpoint, self.service)
-        client.send(b'XXX', 20) # 20 millisecs timeout
+        client.request(b'XXX', 20) # 20 millisecs timeout
         IOLoop.instance().start()
         client.shutdown()
         self.assertEquals(client.timed_out, True)
@@ -182,7 +182,7 @@ class Test_MDPClient(unittest.TestCase):
         """
         self._start_broker(do_reply=True)
         client = MyClient(self.context, self.endpoint, self.service)
-        client.send(b'XXX')
+        client.request(b'XXX')
         IOLoop.instance().start()
         client.shutdown()
         self._stop_broker()

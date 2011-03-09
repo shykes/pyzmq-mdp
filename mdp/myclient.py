@@ -43,7 +43,7 @@ class MyClient(MDPClient):
 if __name__ == '__main__':
     context = zmq.Context()
     client = MyClient(context, "tcp://127.0.0.1:5555", "echo")
-    client.send(b'TEST', 2000)
+    client.request(b'TEST', 2000)
     IOLoop.instance().start()
     client.shutdown()
 

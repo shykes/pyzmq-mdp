@@ -50,7 +50,7 @@ class MDPClient(object):
     """Class for the MDP client side.
 
     Thin encapsulation of a zmq.REQ socket.
-    Provides a send method with optional timout parameter.
+    Provides a request method with optional timout parameter.
 
     Will use a timeout to indicate a broker failure.
     """
@@ -89,7 +89,7 @@ class MDPClient(object):
         self.stream = None
         return
 
-    def send(self, msg, timeout=None):
+    def request(self, msg, timeout=None):
         """Send the given message.
 
         msg can either be a byte-string or a list of byte-strings.
@@ -112,7 +112,6 @@ class MDPClient(object):
     def _on_timeout(self):
         """Helper called after timeout.
         """
-        # TODO: need to reset/resend
         self.timed_out = True
         self._tmo = None
         self.on_timeout()
@@ -131,7 +130,7 @@ class MDPClient(object):
         if self._tmo:
             self._tmo.stop()
             self._tmo = None
-        # setting state before invoking on_message, so we can send from there
+        # setting state before invoking on_message, so we can request from there
         self.can_send = True
         self.on_message(msg)
         return
