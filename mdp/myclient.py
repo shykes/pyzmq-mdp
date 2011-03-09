@@ -22,7 +22,7 @@ __email__ = 'gst-py@a-nugget.de'
 import zmq
 from zmq.eventloop.ioloop import IOLoop
 
-from client import MDPClient
+from client import MDPClient, mdp_request
 
 ###
 
@@ -32,7 +32,7 @@ class MyClient(MDPClient):
         print "Received:", repr(msg)
         IOLoop.instance().stop()
         return
-        
+
     def on_timeout(self):
         print 'TIMEOUT!'
         IOLoop.instance().stop()
@@ -42,11 +42,16 @@ class MyClient(MDPClient):
 
 if __name__ == '__main__':
     context = zmq.Context()
-    client = MyClient(context, "tcp://127.0.0.1:5555", "echo")
-    client.request(b'TEST', 2000)
-    IOLoop.instance().start()
-    client.shutdown()
-
+    socket = context.socket(zmq.REQ)
+    socket.setsockopt(zmq.LINGER, 0)
+    socket.connect("tcp://127.0.0.1:5555")
+    res = mdp_request(socket, b'echo', [b'TEST'], 2.0)
+    if res:
+        print "Reply:", repr(res)
+    else:
+        print 'Timeout!'
+    socket.close()
+#
 
 ### Local Variables:
 ### buffer-file-coding-system: utf-8
