@@ -364,6 +364,8 @@ class MDPBroker(object):
 
         :rtype: None
         """
+##         print 'client message:'
+##         pprint(msg)
         service = msg.pop(0)
         if service.startswith(b'mmi.'):
             self.on_mmi(rp, service, msg)
